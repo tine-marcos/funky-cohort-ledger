@@ -1,0 +1,1702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cohort Ledger</title>
+<style>
+  :root{
+    --bg:#FAF8F3;
+    --surface:#FFFFFF;
+    --ink:#232019;
+    --ink-soft:#8C8579;
+    --line:#E9E4D8;
+    --brand:#4A7C59;
+    --brand-dark:#35573F;
+    --brand-tint:#E9F2EA;
+    --groupA:#B5544B;
+    --groupB:#56606B;
+    --neg:#B3261E;
+    --pos:#2E7D4F;
+    --radius:14px;
+    --radius-pill:999px;
+    --font-display:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+    --font-body:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+    --font-mono:'SF Mono',SFMono-Regular,Consolas,'Liberation Mono',monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--bg);color:var(--ink);font-family:var(--font-body);line-height:1.45;padding:28px 20px 60px;}
+  h1,h2,h3{font-family:var(--font-display);font-weight:700;margin:0 0 4px;}
+  #root{max-width:1120px;margin:0 auto;}
+
+  .hero{margin-bottom:20px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+  .hero h1{font-size:26px;color:var(--ink);letter-spacing:0.1px;font-weight:700;}
+  .hero .tag{color:var(--ink-soft);font-size:14px;margin:0;font-weight:400;}
+
+  button{cursor:pointer;border:none;border-radius:var(--radius-pill);font-size:14px;padding:10px 18px;transition:transform .08s ease, opacity .15s ease, background .15s ease;font-family:inherit;font-weight:500;}
+  button:active{transform:scale(0.98);}
+  button:disabled{opacity:0.5;cursor:not-allowed;}
+  button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible{outline:2px solid var(--brand);outline-offset:2px;}
+  .btn-primary{background:var(--brand);color:#fff;font-weight:600;}
+  .btn-primary:hover{background:var(--brand-dark);}
+  .btn-secondary{background:var(--surface);color:var(--ink);border:1px solid var(--line);margin-top:16px;}
+  .btn-link{background:none;color:var(--ink-soft);padding:4px 0;margin-bottom:14px;font-size:13px;border-radius:0;}
+  .btn-link:hover{color:var(--brand-dark);}
+  .btn-compute{background:var(--ink);color:#fff;width:100%;margin-top:10px;font-size:13px;border-radius:10px;}
+  .btn-compute:hover{opacity:0.85;}
+
+  .empty{color:var(--ink-soft);font-size:14px;padding:30px 0;}
+
+  .campaign-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-top:20px;}
+  .camp-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;cursor:pointer;transition:box-shadow .15s ease, border-color .15s ease;}
+  .camp-card:hover{box-shadow:0 3px 10px rgba(0,0,0,0.06);border-color:var(--brand);}
+  .camp-code{font-family:var(--font-mono);font-weight:600;color:var(--ink);font-size:15px;}
+  .camp-meta{color:var(--ink-soft);font-size:13px;margin-top:3px;}
+  .camp-due{color:var(--brand-dark);font-size:12px;margin-top:8px;font-weight:600;padding-top:8px;border-top:1px solid var(--line);}
+
+  .form-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-top:16px;max-width:440px;}
+  .form-row{display:flex;flex-direction:column;gap:4px;margin-bottom:12px;}
+  .form-row label{font-size:12px;color:var(--ink-soft);font-weight:500;text-transform:uppercase;letter-spacing:0.4px;}
+  .form-row input, .form-row select{padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:var(--font-body);background:var(--surface);color:var(--ink);}
+  .date-field-wrap{position:relative;}
+  .date-input{cursor:pointer;background:var(--surface) !important;width:100%;}
+  .date-input:hover{border-color:var(--brand) !important;}
+  .cal-popover{position:absolute;top:calc(100% + 4px);left:0;z-index:50;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.12);padding:10px;width:240px;}
+  .cal-header{display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:8px;}
+  .cal-header button{background:none;border:1px solid var(--line);border-radius:6px;width:26px;height:26px;padding:0;font-size:14px;color:var(--ink);}
+  .cal-header button:hover{background:var(--bg);}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+  .cal-weekdays{margin-bottom:4px;font-size:10px;color:var(--ink-soft);text-align:center;font-weight:500;}
+  .cal-cell{text-align:center;font-size:12px;padding:5px 0;border-radius:6px;}
+  .cal-day{cursor:pointer;}
+  .cal-day:hover{background:var(--brand-tint);color:var(--brand-dark);font-weight:600;}
+  .form-row-split{display:flex;gap:10px;}
+  .form-row-split .form-row{flex:1;}
+  .form-hint{font-size:11.5px;color:var(--ink-soft);margin-top:-6px;margin-bottom:10px;}
+
+  .info-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;margin-bottom:20px;}
+  .info-card h2{font-size:20px;color:var(--ink);margin-bottom:14px;font-weight:700;}
+  .info-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px 20px;}
+  .info-grid .lbl{display:block;font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.4px;font-weight:500;}
+  .info-grid .val{display:block;font-family:var(--font-mono);font-size:15px;margin-top:2px;font-weight:400;}
+  .info-grid .val-edit{display:block;font-family:var(--font-mono);font-size:15px;margin-top:2px;border:1px solid transparent;background:transparent;padding:1px 4px;border-radius:4px;width:100%;color:var(--ink);}
+  .info-grid .val-edit:hover, .info-grid .val-edit:focus{border-color:var(--line);background:var(--bg);}
+
+  .checkpoints{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:24px;}
+  .cp-card{background:var(--surface);border:1px solid var(--line);border-top:4px solid transparent;border-radius:var(--radius);overflow:hidden;}
+  .cp-head{padding:12px 16px;font-weight:600;font-size:15px;display:flex;justify-content:space-between;align-items:baseline;}
+  .cp-head .cp-window{font-weight:400;font-size:11px;color:var(--ink-soft);}
+  .cp-body{padding:14px 16px 16px;}
+  .up-block{border:1px dashed var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px;}
+  .up-block-a{border-color:color-mix(in srgb, var(--groupA) 40%, var(--line));}
+  .up-block-b{border-color:color-mix(in srgb, var(--groupB) 40%, var(--line));}
+  .up-label{font-size:12px;font-weight:600;margin-bottom:5px;}
+  .up-block-a .up-label{color:var(--groupA);}
+  .up-block-b .up-label{color:var(--groupB);}
+  .up-sub{font-size:10.5px;color:var(--ink-soft);margin-bottom:6px;}
+  .up-block input[type=file]{font-size:11.5px;width:100%;}
+  .file-name{font-size:11px;color:var(--ink-soft);margin-top:6px;font-family:var(--font-mono);word-break:break-all;}
+  .fallback-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:10px 0;font-size:12px;}
+  .form-row-inline{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;font-size:12.5px;}
+  .form-row-inline label{color:var(--ink-soft);flex-shrink:0;}
+  .form-row-inline input[type=text]{flex:1;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12.5px;}
+  .touchpoint-manager{margin-top:14px;padding-top:14px;border-top:1px solid var(--line);}
+  .touchpoint-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  .touchpoint-row input[type=text]{flex:1;padding:7px 9px;border:1px solid var(--line);border-radius:8px;font-size:13px;}
+  .touchpoint-row .date-field-wrap{width:130px;flex-shrink:0;}
+  .touchpoint-row input[type=time]{width:100px;flex-shrink:0;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12.5px;}
+  .fallback-row input{width:70px;padding:5px 7px;border:1px solid var(--line);border-radius:8px;}
+  .hint{color:var(--ink-soft);font-size:12.5px;margin-top:10px;}
+
+  .results-table{width:100%;border-collapse:collapse;margin-top:14px;font-size:13px;}
+  .results-table th{text-align:left;color:var(--ink-soft);font-weight:500;font-size:11px;text-transform:uppercase;padding:6px;background:var(--bg);border-bottom:1px solid var(--line);}
+  .results-table td{padding:6px;font-family:var(--font-mono);border-bottom:1px solid var(--line);font-weight:400;}
+  .results-table td:first-child{font-family:var(--font-body);color:var(--ink-soft);font-size:12.5px;}
+  .neg{color:var(--neg);font-weight:600;}
+  .pos{color:var(--pos);font-weight:600;}
+  .drill{color:var(--brand);font-size:10.5px;text-decoration:underline;cursor:pointer;margin-left:6px;font-family:var(--font-body);white-space:nowrap;}
+  .drill:hover{color:var(--brand-dark);}
+  .detail-panel{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px;}
+  .detail-head{font-size:12px;font-weight:600;color:var(--ink);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;}
+  .detail-scroll{max-height:220px;overflow-y:auto;}
+  .detail-table{width:100%;border-collapse:collapse;font-size:11.5px;}
+  .detail-table th{position:sticky;top:0;background:var(--bg);text-align:left;color:var(--ink-soft);font-weight:500;font-size:10px;text-transform:uppercase;padding:4px 5px;border-bottom:1px solid var(--line);}
+  .detail-table td{padding:4px 5px;font-family:var(--font-mono);border-bottom:1px solid var(--line);}
+  .detail-table td:first-child{font-family:var(--font-body);}
+  .window-note{font-size:11.5px;color:var(--ink-soft);margin-top:12px;padding-top:10px;border-top:1px solid var(--line);}
+  .window-note b{color:var(--ink);font-weight:600;}
+  .warn{color:#8A5A1E;background:#FBF0DE;border-radius:8px;padding:6px 10px;font-size:11.5px;margin-top:8px;display:block;}
+  .busy{color:var(--brand-dark);font-size:12.5px;margin-top:10px;font-weight:500;}
+  .roi-card{background:var(--brand-tint);border:1px solid color-mix(in srgb, var(--brand) 25%, white);border-radius:var(--radius);padding:14px 16px;margin-bottom:12px;}
+  .roi-verdict{font-size:15px;font-weight:700;margin-bottom:10px;}
+  .roi-verdict.pos{color:var(--pos);}
+  .roi-verdict.neg{color:var(--neg);}
+  .roi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px 14px;}
+  .roi-grid .lbl{display:block;font-size:10px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.3px;font-weight:500;}
+  .roi-grid .val{display:block;font-family:var(--font-mono);font-size:14px;margin-top:1px;font-weight:400;}
+  .roi-grid .val.neg{color:var(--neg);font-weight:600;}
+  .roi-grid .val.pos{color:var(--pos);font-weight:600;}
+  .roi-formula{margin-top:10px;padding-top:10px;border-top:1px solid color-mix(in srgb, var(--brand) 20%, white);font-size:12px;color:var(--ink-soft);font-family:var(--font-mono);}
+  .roi-formula b{color:var(--ink);font-size:13px;font-weight:700;}
+
+  .summary-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px;margin-bottom:16px;}
+  .summary-card h3{font-size:17px;color:var(--ink);margin-bottom:12px;font-weight:700;}
+  .summary-scroll{overflow-x:auto;}
+  .summary-table{border-collapse:collapse;width:100%;min-width:640px;font-size:13px;}
+  .summary-table th, .summary-table td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;}
+  .summary-table td{font-family:var(--font-mono);font-weight:400;}
+  .summary-table td.rowlabel{font-family:var(--font-body);color:var(--ink-soft);font-size:12.5px;white-space:nowrap;font-weight:400;}
+  .summary-table th{background:var(--bg);color:var(--ink-soft);font-size:11px;text-transform:uppercase;font-weight:500;}
+  .roi-subnote{font-size:11px;color:var(--ink-soft);font-family:var(--font-mono);border-bottom:none !important;padding-top:2px !important;}
+  .legend{font-size:12px;color:var(--ink-soft);margin-bottom:10px;}
+  .legend b{color:var(--ink);font-weight:600;}
+  .roi-section{border-top:4px solid transparent;}
+
+  @media(max-width:640px){
+    body{padding:18px 12px 40px;}
+    .hero h1{font-size:22px;}
+    .checkpoints{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script>
+/* ---------------------------------------------------------------
+   Cohort Ledger v2
+   Built directly around real Funky Food exports:
+   - Group A / Group B rosters come from Shopify order exports
+     (multi-lineitem rows grouped by order Name; Group A filtered by
+     Tags containing the discount code, Group B filtered by Tags
+     containing "appstle_subscription_first_order" within a date window)
+   - Status + frequency come from the Appstle Subscriptions master
+     export (status priority: active > paused > cancelled when a
+     customer has multiple subscription rows)
+   - Actual orders come from a separate Orders Data export, counted
+     by Paid at falling inside each customer's OWN window
+     (their order/join date + 28/56/84 days) — not one shared date
+   - Checkpoints that fall beyond the Orders Data export's coverage
+     are flagged "incomplete" rather than silently under-counted
+------------------------------------------------------------------*/
+
+// Storage backend: uses window.storage when running inside Claude's chat
+// window (campaigns persist across visits there), and falls back to the
+// browser's own localStorage everywhere else — opened as a downloaded file,
+// or hosted on Vercel — so persistence works in both places without
+// changing any of the calling code below.
+const LS_PREFIX = 'cohortLedger:';
+const hasNativeStorage = typeof window.storage !== 'undefined' && window.storage !== null;
+const storageBackend = {
+  async get(key){
+    if(hasNativeStorage) return await window.storage.get(key);
+    const v = localStorage.getItem(LS_PREFIX + key);
+    if(v === null) throw new Error('key not found: ' + key);
+    return { key, value: v };
+  },
+  async set(key, value){
+    if(hasNativeStorage) return await window.storage.set(key, value);
+    localStorage.setItem(LS_PREFIX + key, value);
+    return { key, value };
+  },
+  async list(prefix){
+    if(hasNativeStorage) return await window.storage.list(prefix);
+    const keys = [];
+    for(let i = 0; i < localStorage.length; i++){
+      const k = localStorage.key(i);
+      if(k && k.startsWith(LS_PREFIX)){
+        const realKey = k.slice(LS_PREFIX.length);
+        if(!prefix || realKey.startsWith(prefix)) keys.push(realKey);
+      }
+    }
+    return { keys };
+  }
+};
+
+let APP = { campaigns: [], currentId: null, uploads: {}, snapshots: {}, showForm: false, busy: {}, detailOpen: {} };
+// Cadence is a per-campaign choice, not a global setting — some campaigns need
+// only the original 3 milestones, others (like ongoing inactives monitoring)
+// want a check-in every week.
+const CADENCE_PRESETS = { weekly: [1,2,3,4,5,6,7,8], milestone: [4,8,12] };
+function getCheckpoints(camp){
+  if(camp && camp.cadence === 'sequence'){
+    const n = (camp.touchpoints || []).length;
+    return Array.from({length: n}, (_, i) => i);
+  }
+  return CADENCE_PRESETS[camp && camp.cadence] || CADENCE_PRESETS.milestone;
+}
+function isCalculated(snap, camp){
+  if(!snap) return false;
+  return (camp && camp.cadence === 'sequence') ? !!snap.A : !!(snap.A && snap.B);
+}
+// Cutoff for a touchpoint's "cumulative so far" count: right before the next
+// email goes out (exclusive), or through the campaign's expiry for the last
+// touchpoint (inclusive), or no cutoff at all if neither is set.
+function extractDateOnly(dateTimeStr){
+  const m = String(dateTimeStr).match(/^(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : null;
+}
+// Strips the order timestamp's own timezone offset and keeps the naive local
+// wall-clock reading (e.g. "2026-06-25 16:00:00 +1000" -> "2026-06-25 16:00:00").
+// Touchpoint send times are entered the same naive way (AU local time, no
+// offset), so comparing these as plain strings sidesteps any timezone
+// re-parsing bugs entirely — both sides represent the same real-world clock.
+function extractLocalDateTime(dateTimeStr){
+  const m = String(dateTimeStr).match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})/);
+  if(m) return `${m[1]} ${m[2]}`;
+  const d = extractDateOnly(dateTimeStr);
+  return d ? `${d} 00:00:00` : null;
+}
+function getTouchpointCutoff(camp, idx){
+  const touchpoints = camp.touchpoints || [];
+  const next = touchpoints[idx + 1];
+  if(next && next.date){
+    const time = next.time || '00:00';
+    return { dateTime: `${next.date} ${time}:00`, inclusive: false };
+  }
+  if(camp.expiryDate){
+    return { dateTime: `${camp.expiryDate} 23:59:59`, inclusive: true };
+  }
+  return null;
+}
+// Compares naive local date-time strings directly (see extractLocalDateTime) —
+// avoids parsing into Date objects, which would reintroduce the same timezone
+// mismatch bug this replaced.
+function filterByCutoff(rosterMap, cutoff){
+  if(!cutoff) return rosterMap;
+  const filtered = new Map();
+  rosterMap.forEach((info, email) => {
+    const orderDateTime = extractLocalDateTime(info.anchorDate);
+    if(!orderDateTime) return;
+    const passes = cutoff.inclusive ? orderDateTime <= cutoff.dateTime : orderDateTime < cutoff.dateTime;
+    if(passes) filtered.set(email, info);
+  });
+  return filtered;
+}
+// Colors weeks on a light-to-dark gradient instead of fixed named hues, since the
+// checkpoint count varies by campaign (weekly vs milestone cadence).
+function weekColor(week, maxWeek){
+  const t = maxWeek > 1 ? (week - 1) / (maxWeek - 1) : 0;
+  const start = [176, 199, 180], end = [53, 87, 63];
+  const rgb = start.map((s,i) => Math.round(s + (end[i]-s)*t));
+  return `rgb(${rgb[0]},${rgb[1]},${rgb[2]})`;
+}
+function weekTint(week, maxWeek){
+  const t = maxWeek > 1 ? (week - 1) / (maxWeek - 1) : 0;
+  const start = [176, 199, 180], end = [53, 87, 63];
+  const rgb = start.map((s,i) => Math.round(s + (end[i]-s)*t));
+  return `rgba(${rgb[0]},${rgb[1]},${rgb[2]},0.13)`;
+}
+const STATUS_PRIORITY = ['active','paused','cancelled'];
+
+/* ---------- generic helpers ---------- */
+function escapeHtml(s){
+  if(s === undefined || s === null) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function fmtInt(n){ return (n || n === 0) ? Number(n).toLocaleString() : '—'; }
+function fmtPct(n){ return isFinite(n) ? Number(n).toFixed(2) + '%' : '0.00%'; }
+function fmtNum(n){ return isFinite(n) ? Number(n).toFixed(2) : '0.00'; }
+function fmtMoney(n){ return isFinite(n) ? (n<0?'-$':'$') + Math.abs(Number(n)).toFixed(2) : '$0.00'; }
+function fmtDate(input){
+  if(!input) return '—';
+  const m = String(input).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(m) return `${m[3]}-${m[2]}-${m[1]}`;
+  return String(input).slice(0,10);
+}
+// Parses a DD-MM-YYYY string back to ISO (YYYY-MM-DD) for storage/date-math.
+// Returns null if the text doesn't match, so callers can reject bad input.
+function parseAUDate(str){
+  const m = String(str).trim().match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if(!m) return null;
+  const day = m[1].padStart(2,'0'), month = m[2].padStart(2,'0'), year = m[3];
+  return `${year}-${month}-${day}`;
+}
+
+/* ---------- custom calendar picker (AU display, works everywhere regardless of browser locale) ---------- */
+const CAL_WEEKDAYS = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+function openCalendar(target, isoValue){
+  const wasOpenOnSame = APP.calendarTarget === target;
+  if(wasOpenOnSame){ APP.calendarTarget = null; render(); return; }
+  const base = isoValue ? new Date(isoValue) : new Date();
+  APP.calendarTarget = target;
+  APP.calendarYear = base.getFullYear();
+  APP.calendarMonth = base.getMonth();
+  render();
+}
+function closeCalendar(){ APP.calendarTarget = null; render(); }
+function calendarNav(delta){
+  APP.calendarMonth += delta;
+  if(APP.calendarMonth < 0){ APP.calendarMonth = 11; APP.calendarYear--; }
+  if(APP.calendarMonth > 11){ APP.calendarMonth = 0; APP.calendarYear++; }
+  render();
+}
+function handleCalendarPick(isoDate){
+  const target = APP.calendarTarget;
+  APP.calendarTarget = null;
+  if(!target) return;
+  if(target.startsWith('form:')){
+    APP.newFormData = APP.newFormData || {};
+    APP.newFormData[target.slice(5)] = isoDate;
+  } else if(target.startsWith('campaign:')){
+    updateCampaignField(target.slice(9), isoDate);
+  } else if(target.startsWith('touchpoint:')){
+    updateTouchpointDate(parseInt(target.slice(11), 10), isoDate);
+  }
+  render();
+}
+function renderCalendarPopover(){
+  const year = APP.calendarYear, month = APP.calendarMonth;
+  const firstDay = new Date(year, month, 1);
+  const startWeekday = firstDay.getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const monthLabel = firstDay.toLocaleDateString('en-AU', { month: 'long', year: 'numeric' });
+  let cells = '';
+  for(let i = 0; i < startWeekday; i++) cells += `<div class="cal-cell cal-empty"></div>`;
+  for(let d = 1; d <= daysInMonth; d++){
+    const iso = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    cells += `<div class="cal-cell cal-day" onclick="event.stopPropagation(); handleCalendarPick('${iso}')">${d}</div>`;
+  }
+  return `<div class="cal-popover" onclick="event.stopPropagation()">
+    <div class="cal-header">
+      <button type="button" onclick="calendarNav(-1)">‹</button>
+      <span>${monthLabel}</span>
+      <button type="button" onclick="calendarNav(1)">›</button>
+    </div>
+    <div class="cal-grid cal-weekdays">${CAL_WEEKDAYS.map(d=>`<div>${d}</div>`).join('')}</div>
+    <div class="cal-grid">${cells}</div>
+  </div>`;
+}
+// Reusable AU-format date field: readonly text input (always shows DD-MM-YYYY
+// regardless of browser locale) that opens the custom calendar on click.
+function renderDateField(target, isoValue, extraClass){
+  const open = APP.calendarTarget === target;
+  return `<div class="date-field-wrap">
+    <input type="text" readonly class="date-input ${extraClass||''}" placeholder="DD-MM-YYYY" value="${escapeHtml(fmtDate(isoValue))}" onclick="event.stopPropagation(); openCalendar('${target}', '${isoValue||''}')">
+    ${open ? renderCalendarPopover() : ''}
+  </div>`;
+}
+function freqLabel(days){
+  if(!days) return '—';
+  if(days === 7) return 'Weekly';
+  if(days === 14) return 'Fortnightly';
+  if(days % 7 === 0) return `Every ${days/7} weeks`;
+  if(days === 30 || days === 31) return 'Monthly';
+  return `Every ${days} days`;
+}
+// Group A's frequency mix (days -> count), used as the target Group B is matched against.
+function buildFrequencyDistribution(rosterMap, subIndex, fallbackDays){
+  const dist = new Map();
+  rosterMap.forEach((anchorDate, email) => {
+    const resolved = resolveSub(subIndex.get(email));
+    const days = resolved.days || fallbackDays;
+    dist.set(days, (dist.get(days) || 0) + 1);
+  });
+  return dist;
+}
+// Selects a Group B subset that mirrors Group A's frequency mix exactly (same count
+// per frequency bucket), so the two groups are comparing like-for-like customer
+// behaviour rather than just "anyone who joined in the same window." Selection
+// within a bucket is deterministic (earliest order first). If a bucket doesn't have
+// enough candidates, all available are taken and the shortfall is reported.
+function matchByFrequency(candidateRosterMap, targetDist, subIndex, fallbackDays){
+  const byBucket = new Map();
+  candidateRosterMap.forEach((anchorDate, email) => {
+    const resolved = resolveSub(subIndex.get(email));
+    const days = resolved.days || fallbackDays;
+    if(!byBucket.has(days)) byBucket.set(days, []);
+    byBucket.get(days).push({ email, anchorDate });
+  });
+  byBucket.forEach(list => list.sort((a,b) => a.anchorDate < b.anchorDate ? -1 : (a.anchorDate > b.anchorDate ? 1 : 0)));
+  const matched = new Map();
+  const shortfalls = [];
+  targetDist.forEach((neededCount, days) => {
+    const available = byBucket.get(days) || [];
+    available.slice(0, neededCount).forEach(c => matched.set(c.email, c.anchorDate));
+    if(available.length < neededCount){
+      shortfalls.push({ days, label: freqLabel(days), needed: neededCount, available: available.length });
+    }
+  });
+  return { matched, shortfalls };
+}
+function deltaLabel(n){
+  if(!isFinite(n)) return '—';
+  const sign = n < 0 ? '▼' : '▲';
+  return `${sign} ${n >= 0 ? '+' : ''}${n.toFixed(2)}`;
+}
+function getCurrentCampaign(){ return APP.campaigns.find(c => c.id === APP.currentId); }
+function firstCalculatedSnapshot(camp){
+  const snaps = APP.snapshots[camp.id] || {};
+  for(const w of getCheckpoints(camp)){
+    if(snaps[w] && snaps[w].A) return snaps[w];
+  }
+  return null;
+}
+// For sequence campaigns, the meaningful "overall total" is the LAST touchpoint
+// calculated (cumulative through the whole flow), not the first one.
+function lastCalculatedSnapshot(camp){
+  const snaps = APP.snapshots[camp.id] || {};
+  const checkpoints = getCheckpoints(camp);
+  for(let i = checkpoints.length - 1; i >= 0; i--){
+    const w = checkpoints[i];
+    if(snaps[w] && snaps[w].A) return snaps[w];
+  }
+  return null;
+}
+function addDays(dateStr, n){
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0,10);
+}
+async function updateCampaignField(field, value){
+  const camp = getCurrentCampaign();
+  if(!camp) return;
+  camp[field] = value;
+  try{ await storageBackend.set(`campaign:${camp.id}`, JSON.stringify(camp)); }
+  catch(e){ console.warn('Could not persist campaign edit (storage unavailable in this environment):', e); }
+}
+
+/* ---------- CSV parsing (multi-file, works with the real export shapes) ---------- */
+function readFileAsText(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(file);
+  });
+}
+// Standard multi-file CSV parse (order exports, subscriptions export without preamble)
+function parseFiles(fileList){
+  const files = Array.from(fileList || []);
+  return Promise.all(files.map(file => new Promise((resolve, reject) => {
+    Papa.parse(file, {
+      header: true, skipEmptyLines: true,
+      complete: (results) => resolve(results.data),
+      error: (err) => reject(err)
+    });
+  }))).then(arrays => arrays.flat());
+}
+// Appstle Subscriptions export sometimes has a "LAST_RUN: ..." line before the real header — strip it if present.
+function parseSubsFiles(fileList){
+  const files = Array.from(fileList || []);
+  return Promise.all(files.map(file => readFileAsText(file).then(text => {
+    const nlIdx = text.indexOf('\n');
+    if(nlIdx > 0 && /^LAST_RUN/i.test(text.slice(0, nlIdx))){
+      text = text.slice(nlIdx + 1);
+    }
+    return Papa.parse(text, { header: true, skipEmptyLines: true }).data;
+  }))).then(arrays => arrays.flat());
+}
+
+/* ---------- Shopify order export handling ---------- */
+// Each order explodes into one row per line item; only the first row of an
+// order carries Email / Paid at / Tags — this groups by order Name and
+// forward-fills those header-level fields from whichever row has them.
+function groupOrdersByName(rows){
+  const orders = new Map();
+  rows.forEach(row => {
+    const name = String(row['Name'] || '').trim();
+    if(!name) return;
+    if(!orders.has(name)){
+      orders.set(name, {
+        name,
+        email: String(row['Email'] || '').trim(),
+        paidAt: String(row['Paid at'] || '').trim(),
+        createdAt: String(row['Created at'] || '').trim(),
+        tags: String(row['Tags'] || '').trim(),
+        financialStatus: String(row['Financial Status'] || '').trim(),
+        total: String(row['Total'] || '').trim(),
+        discountAmount: String(row['Discount Amount'] || '').trim(),
+      });
+    } else {
+      const o = orders.get(name);
+      if(!o.email && row['Email']) o.email = String(row['Email']).trim();
+      if(!o.paidAt && row['Paid at']) o.paidAt = String(row['Paid at']).trim();
+      if(!o.createdAt && row['Created at']) o.createdAt = String(row['Created at']).trim();
+      if(!o.tags && row['Tags']) o.tags = String(row['Tags']).trim();
+      if(!o.financialStatus && row['Financial Status']) o.financialStatus = String(row['Financial Status']).trim();
+      if(!o.total && row['Total']) o.total = String(row['Total']).trim();
+      if(!o.discountAmount && row['Discount Amount']) o.discountAmount = String(row['Discount Amount']).trim();
+    }
+  });
+  return orders;
+}
+// Builds email -> discount dollars spent on their qualifying order (their entry
+// into the roster). Used for the ROI cost side, separate from the roster map
+// itself so the matching/status pipeline above stays untouched.
+function buildDiscountIndex(ordersByName, filterFn){
+  const map = new Map();
+  for(const order of ordersByName.values()){
+    if(!order.email || !filterFn(order)) continue;
+    const email = order.email.trim().toLowerCase();
+    const amt = parseFloat(order.discountAmount) || 0;
+    if(!map.has(email) || amt > map.get(email)) map.set(email, amt);
+  }
+  return map;
+}
+// Roster = one entry per email, anchored to the EARLIEST qualifying order's Created at.
+function extractRoster(ordersByName, filterFn){
+  const roster = new Map();
+  for(const order of ordersByName.values()){
+    if(!order.email) continue;
+    if(!filterFn(order)) continue;
+    const email = order.email.trim().toLowerCase();
+    const created = order.createdAt;
+    if(!roster.has(email) || created < roster.get(email)) roster.set(email, created);
+  }
+  return roster;
+}
+
+/* ---------- Appstle Subscriptions master: status + frequency ---------- */
+function buildSubIndex(subRows){
+  const map = new Map();
+  subRows.forEach(row => {
+    const email = String(row['customerEmail'] || '').trim().toLowerCase();
+    if(!email) return;
+    const status = String(row['status'] || '').trim().toLowerCase();
+    const interval = String(row['deliveryPolicyInterval'] || '').trim().toLowerCase();
+    const count = parseInt(row['deliveryPolicyIntervalCount'], 10) || 1;
+    let days = 7;
+    if(interval === 'week') days = count * 7;
+    else if(interval === 'month') days = count * 30;
+    else if(interval === 'day') days = count;
+    const updatedAt = row['updatedAt'] || row['createdAt'] || '';
+    if(!map.has(email)) map.set(email, []);
+    map.get(email).push({
+      status, days, updatedAt,
+      createdAt: row['createdAt'] || '',
+      pausedOn: String(row['pausedOn'] || '').trim(),
+      cancelledOn: String(row['cancelledOn'] || '').trim(),
+    });
+  });
+  return map;
+}
+// A Group A "genuine returning" customer is someone whose earliest known
+// subscription record predates their DC order (they were a customer before
+// this promo, whether on the same contract or a new one) AND that history
+// shows an actual lapse at some point (paused or cancelled). Customers whose
+// only known record was born by this very order are first-time; customers
+// with prior history that never once lapsed were already active.
+function classifyReturning(records, anchorDate){
+  if(!records || records.length === 0) return 'unmatched';
+  const anchor = new Date(anchorDate);
+  const created = records.map(r => new Date(r.createdAt)).filter(d => !isNaN(d));
+  if(created.length === 0) return 'unmatched';
+  const earliestCreated = new Date(Math.min(...created));
+  const hadPrior = (anchor - earliestCreated) > 1 * 86400000; // more than a day before their order
+  const everLapsed = records.some(r => r.pausedOn !== '' || r.cancelledOn !== '');
+  if(!hadPrior) return 'first-time';
+  if(!everLapsed) return 'already-active';
+  return 'genuine-returning';
+}
+// Filters a Group A roster down to genuine returning customers, returning the
+// filtered roster plus a list of everyone excluded and why.
+function filterGenuineReturning(rosterMap, subIndex){
+  const kept = new Map();
+  const excluded = [];
+  rosterMap.forEach((anchorDate, email) => {
+    const cls = classifyReturning(subIndex.get(email), anchorDate);
+    if(cls === 'genuine-returning') kept.set(email, anchorDate);
+    else excluded.push({ email, reason: cls, orderDate: anchorDate });
+  });
+  return { kept, excluded };
+}
+// Priority: active beats paused beats cancelled. Among rows sharing the winning
+// status, the most recently updated one's frequency is used.
+function resolveSub(records){
+  if(!records || records.length === 0) return { status: 'unmatched', days: null };
+  for(const s of STATUS_PRIORITY){
+    const matches = records.filter(r => r.status === s);
+    if(matches.length > 0){
+      matches.sort((a,b) => String(b.updatedAt||'').localeCompare(String(a.updatedAt||'')));
+      return { status: s, days: matches[0].days };
+    }
+  }
+  return { status: 'unknown', days: records[0].days };
+}
+
+/* ---------- Orders Data: actual paid orders per customer ---------- */
+function buildOrdersIndex(ordersByName){
+  const map = new Map();
+  let maxPaid = null;
+  for(const order of ordersByName.values()){
+    if(!order.email || !order.paidAt) continue;
+    const email = order.email.trim().toLowerCase();
+    if(!map.has(email)) map.set(email, []);
+    map.get(email).push({ paidAt: order.paidAt, total: parseFloat(order.total) || 0 });
+    if(maxPaid === null || order.paidAt > maxPaid) maxPaid = order.paidAt;
+  }
+  return { map, maxPaid };
+}
+function countInWindow(paidRecords, anchorDate, windowDays){
+  const start = new Date(anchorDate);
+  const end = new Date(start); end.setDate(end.getDate() + windowDays);
+  let n = 0, revenue = 0;
+  paidRecords.forEach(r => { const d = new Date(r.paidAt); if(d >= start && d <= end){ n++; revenue += r.total; } });
+  return { count: n, revenue };
+}
+
+/* ---------- Pulls it all together for one group at one checkpoint ---------- */
+function computeGroupMetrics(rosterMap, subIndex, ordersIdx, windowDays, fallbackDays){
+  const total = rosterMap.size;
+  let activeCt = 0, pausedCt = 0, cancelledCt = 0, unmatchedCt = 0;
+  let actualSum = 0, actualCt = 0, incompleteCt = 0;
+  let expectedSum = 0, expectedCt = 0;
+  let revenueSum = 0;
+  let earliestCP = null, latestCP = null;
+  const maxPaidDate = ordersIdx.maxPaid ? new Date(ordersIdx.maxPaid) : null;
+  const details = [];
+
+  rosterMap.forEach((anchorDate, email) => {
+    const cp = new Date(anchorDate); cp.setDate(cp.getDate() + windowDays);
+    if(earliestCP === null || cp < earliestCP) earliestCP = cp;
+    if(latestCP === null || cp > latestCP) latestCP = cp;
+
+    const resolved = resolveSub(subIndex.get(email));
+    if(resolved.status === 'active') activeCt++;
+    else if(resolved.status === 'paused') pausedCt++;
+    else if(resolved.status === 'cancelled') cancelledCt++;
+    else unmatchedCt++;
+
+    const days = resolved.days || fallbackDays;
+    const expected = Math.floor(windowDays / days);
+    expectedSum += expected;
+    expectedCt++;
+
+    const paidRecords = ordersIdx.map.get(email) || [];
+    const { count: actual, revenue } = countInWindow(paidRecords, anchorDate, windowDays);
+    actualSum += actual;
+    actualCt++;
+    revenueSum += revenue;
+
+    const incomplete = !!(maxPaidDate && cp > maxPaidDate);
+    if(incomplete) incompleteCt++;
+
+    details.push({
+      email, status: resolved.status, actual, expected, revenue,
+      variance: actual - expected, checkpointDate: cp.toISOString(), incomplete,
+      orderDate: anchorDate, frequencyDays: days, frequencyLabel: freqLabel(days),
+    });
+  });
+
+  const avgActual = actualCt ? actualSum / actualCt : 0;
+  const avgExpected = expectedCt ? expectedSum / expectedCt : 0;
+  details.sort((a,b) => a.email.localeCompare(b.email));
+  return {
+    customers: total,
+    activePct: total ? (activeCt/total)*100 : 0,
+    pausedPct: total ? (pausedCt/total)*100 : 0,
+    cancelledPct: total ? (cancelledCt/total)*100 : 0,
+    unmatchedCt,
+    avgActual, avgExpected,
+    avgVariance: avgActual - avgExpected,
+    totalRevenue: revenueSum,
+    avgRevenue: total ? revenueSum / total : 0,
+    incompleteCt,
+    earliestCP: earliestCP ? earliestCP.toISOString() : null,
+    latestCP: latestCP ? latestCP.toISOString() : null,
+    details,
+  };
+}
+
+/* ---------- storage / persistence ---------- */
+async function loadCampaigns(){
+  try{
+    const res = await storageBackend.list('campaign:');
+    if(res && res.keys){
+      for(const k of res.keys){
+        try{
+          const item = await storageBackend.get(k);
+          if(item) APP.campaigns.push(JSON.parse(item.value));
+        }catch(e){ /* skip unreadable key */ }
+      }
+    }
+  }catch(e){ console.error('loadCampaigns failed', e); }
+  APP.campaigns.sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+  render();
+  // Preload snapshots for every campaign (not just the one being viewed) so the
+  // home screen can show each campaign's next-due checkpoint at a glance.
+  for(const c of APP.campaigns){ loadSnapshotsFor(c.id); }
+}
+// A rough estimate (send date + N*7 days) for reminders, shown before a
+// checkpoint is actually calculated. Once calculated, the real per-customer
+// earliest/latest range (from actual order dates) is shown instead — this is
+// just so nothing gets forgotten across multiple campaigns in flight.
+function estimateCheckpointDate(camp, week){
+  if(camp.cadence === 'sequence'){
+    const tp = (camp.touchpoints || [])[week];
+    return tp ? tp.date || null : null;
+  }
+  if(!camp.weekSentDate) return null;
+  return addDays(camp.weekSentDate, week * 7);
+}
+function nextDueCheckpoint(campaignId, camp){
+  const snaps = APP.snapshots[campaignId] || {};
+  for(const w of getCheckpoints(camp)){
+    if(!isCalculated(snaps[w], camp)) return { week: w, date: estimateCheckpointDate(camp, w) };
+  }
+  return null;
+}
+async function loadSnapshotsFor(campaignId){
+  APP.snapshots[campaignId] = APP.snapshots[campaignId] || {};
+  const camp = APP.campaigns.find(c => c.id === campaignId);
+  for(const week of getCheckpoints(camp)){
+    for(const group of ['A','B']){
+      try{
+        const res = await storageBackend.get(`snapshot:${campaignId}:${week}:${group}`);
+        if(res){
+          APP.snapshots[campaignId][week] = APP.snapshots[campaignId][week] || {};
+          APP.snapshots[campaignId][week][group] = JSON.parse(res.value);
+        }
+      }catch(e){ /* not saved yet */ }
+    }
+  }
+  render();
+}
+async function createCampaign(data){
+  const id = 'camp_' + Date.now();
+  const camp = {
+    id, name: data.name, code: data.code, channel: data.channel,
+    weekSentDate: data.weekSentDate, totalDelivered: data.totalDelivered,
+    actives: data.actives, firstTimers: data.firstTimers,
+    sameWindowStart: data.sameWindowStart, sameWindowEnd: data.sameWindowEnd,
+    cadence: data.cadence || 'milestone',
+    createdAt: Date.now()
+  };
+  try{ await storageBackend.set(`campaign:${id}`, JSON.stringify(camp)); }
+  catch(e){ console.error('save campaign failed', e); }
+  APP.campaigns.unshift(camp);
+  APP.currentId = id;
+  APP.snapshots[id] = {};
+  APP.uploads = {};
+  render();
+}
+
+/* ---------- event handlers ---------- */
+function toggleForm(){
+  APP.showForm = !APP.showForm;
+  if(APP.showForm) APP.newFormData = { name:'', code:'', channel:'', weekSentDate:'', sameWindowStart:'', sameWindowEnd:'', totalDelivered:'', cadence:'milestone' };
+  render();
+}
+function updateNewForm(field, value){
+  APP.newFormData = APP.newFormData || {};
+  APP.newFormData[field] = value;
+}
+function submitNewForm(){
+  const f = APP.newFormData || {};
+  const name = (f.name || '').trim();
+  if(!name){ alert('Give the campaign a name first.'); return; }
+  const sent = f.weekSentDate || new Date().toISOString().slice(0,10);
+  const winStart = f.sameWindowStart || sent;
+  const winEnd = f.sameWindowEnd || addDays(sent, 14);
+  createCampaign({
+    name,
+    code: (f.code || '').trim(),
+    channel: (f.channel || '').trim(),
+    weekSentDate: sent,
+    totalDelivered: parseFloat(f.totalDelivered) || 0,
+    sameWindowStart: winStart,
+    sameWindowEnd: winEnd,
+    cadence: f.cadence || 'milestone',
+  });
+  APP.showForm = false;
+  APP.newFormData = {};
+}
+function openCampaign(id){
+  APP.currentId = id;
+  APP.uploads = {};
+  render();
+  loadSnapshotsFor(id);
+}
+function goHome(){ APP.currentId = null; render(); }
+
+function ensureUpload(week){
+  APP.uploads[week] = APP.uploads[week] || { groupAFiles: null, groupANames: [], groupBFiles: null, groupBNames: [], subsFiles: null, subsNames: [], ordersFiles: null, ordersNames: [], fallbackDays: 7 };
+  return APP.uploads[week];
+}
+function handleGroupAFiles(event, week){
+  const up = ensureUpload(week);
+  up.groupAFiles = event.target.files;
+  up.groupANames = Array.from(event.target.files).map(f => f.name);
+  render();
+}
+function handleGroupBFiles(event, week){
+  const up = ensureUpload(week);
+  up.groupBFiles = event.target.files;
+  up.groupBNames = Array.from(event.target.files).map(f => f.name);
+  render();
+}
+function handleSubsFiles(event, week){
+  const up = ensureUpload(week);
+  up.subsFiles = event.target.files;
+  up.subsNames = Array.from(event.target.files).map(f => f.name);
+  render();
+}
+function handleOrdersFiles(event, week){
+  const up = ensureUpload(week);
+  up.ordersFiles = event.target.files;
+  up.ordersNames = Array.from(event.target.files).map(f => f.name);
+  render();
+}
+function setFallbackDays(week, value){
+  const up = ensureUpload(week);
+  up.fallbackDays = parseFloat(value) || 7;
+}
+
+async function computeCheckpoint(week){
+  const camp = getCurrentCampaign();
+  if(!camp) return;
+  if(camp.cadence === 'sequence') return computeTouchpoint(week);
+  const up = APP.uploads[week];
+  if(!up || !up.groupAFiles || !up.groupBFiles || !up.subsFiles || !up.ordersFiles){
+    alert('Upload all four files for Week ' + week + ' first: Group A orders, Group B orders, Subscriptions master, and Orders Data.');
+    return;
+  }
+  APP.busy[week] = true; render();
+  try{
+    const [dcRows, sameRows, subsRows, ordersRows] = await Promise.all([
+      parseFiles(up.groupAFiles),
+      parseFiles(up.groupBFiles),
+      parseSubsFiles(up.subsFiles),
+      parseFiles(up.ordersFiles),
+    ]);
+
+    const dcOrdersByName = groupOrdersByName(dcRows);
+    const sameOrdersByName = groupOrdersByName(sameRows);
+    const ordersByNameAll = groupOrdersByName(ordersRows);
+
+    const codeLower = (camp.code || '').trim().toLowerCase();
+    if(!codeLower){ alert('This campaign has no discount code set — add one on the campaign details before calculating.'); APP.busy[week]=false; render(); return; }
+    const rangeStart = new Date(camp.sameWindowStart);
+    const rangeEnd = new Date(camp.sameWindowEnd);
+
+    const rosterARaw = extractRoster(dcOrdersByName, o => o.tags.toLowerCase().includes(codeLower));
+    const rosterB = extractRoster(sameOrdersByName, o => {
+      if(!o.tags.toLowerCase().includes('appstle_subscription_first_order')) return false;
+      const d = new Date(o.createdAt);
+      return d >= rangeStart && d <= rangeEnd;
+    });
+
+    const subIndex = buildSubIndex(subsRows);
+    const ordersIdx = buildOrdersIndex(ordersByNameAll);
+
+    const { kept: rosterA, excluded: excludedA } = filterGenuineReturning(rosterARaw, subIndex);
+    const targetDist = buildFrequencyDistribution(rosterA, subIndex, up.fallbackDays);
+    const { matched: rosterBMatched, shortfalls } = matchByFrequency(rosterB, targetDist, subIndex, up.fallbackDays);
+    const windowDays = week * 7;
+
+    const metricsA = computeGroupMetrics(rosterA, subIndex, ordersIdx, windowDays, up.fallbackDays);
+    const metricsB = computeGroupMetrics(rosterBMatched, subIndex, ordersIdx, windowDays, up.fallbackDays);
+    metricsA.excludedNotGenuine = excludedA;
+    metricsB.matchShortfalls = shortfalls;
+    metricsB.candidatePoolSize = rosterB.size;
+
+    // ROI: discount cost comes from Group A's own qualifying orders (Discount Amount);
+    // incremental revenue compares Group A's actual revenue against Group B's matched
+    // baseline, since Group B represents what similar customers spend with no discount at all.
+    const discountIndex = buildDiscountIndex(dcOrdersByName, o => o.tags.toLowerCase().includes(codeLower));
+    excludedA.forEach(e => { e.discountAmount = discountIndex.get(e.email) || 0; });
+    let discountCostGenuine = 0;
+    rosterA.forEach((_, email) => { discountCostGenuine += (discountIndex.get(email) || 0); });
+    let discountCostWasted = 0;
+    excludedA.forEach(e => { discountCostWasted += (discountIndex.get(e.email) || 0); });
+    // ROI focuses only on the genuine returning customers themselves — Group B was
+    // frequency-matched for behavioural comparison (order cadence, retention), but its
+    // dollar spend was never controlled for, so it isn't a valid revenue baseline.
+    const netReturn = metricsA.totalRevenue - discountCostGenuine;
+    const returnRatio = discountCostGenuine > 0 ? metricsA.totalRevenue / discountCostGenuine : null;
+    const costPerGenuine = metricsA.customers > 0 ? discountCostGenuine / metricsA.customers : null;
+    metricsA.roi = { discountCostGenuine, discountCostWasted, netReturn, returnRatio, costPerGenuine, genuineCount: metricsA.customers };
+    const delivered = parseFloat(camp.totalDelivered) || 0;
+    metricsA.conversionRateRaw = delivered ? (rosterARaw.size / delivered) * 100 : null;
+    metricsA.rawCount = rosterARaw.size;
+    metricsA.conversionRateGenuine = delivered ? (rosterA.size / delivered) * 100 : null;
+
+    if(rosterARaw.size === 0) alert('No Group A orders matched the code "' + camp.code + '" in Tags. Double check the code and the uploaded file.');
+    if(rosterB.size === 0) alert('No Group B orders matched "appstle_subscription_first_order" within ' + camp.sameWindowStart + ' to ' + camp.sameWindowEnd + '. Double check those dates (editable above) and the uploaded file.');
+
+    let saveFailed = false;
+    try{
+      await storageBackend.set(`snapshot:${camp.id}:${week}:A`, JSON.stringify(metricsA));
+      await storageBackend.set(`snapshot:${camp.id}:${week}:B`, JSON.stringify(metricsB));
+    }catch(saveErr){
+      saveFailed = true;
+      console.warn('Could not persist this snapshot (storage unavailable in this environment):', saveErr);
+    }
+    APP.snapshots[camp.id] = APP.snapshots[camp.id] || {};
+    APP.snapshots[camp.id][week] = { A: metricsA, B: metricsB };
+    APP.saveWarning = APP.saveWarning || {};
+    APP.saveWarning[week] = saveFailed;
+  }catch(e){
+    console.error(e);
+    alert('Something went wrong while calculating Week ' + week + ': ' + e.message);
+  }
+  APP.busy[week] = false;
+  render();
+}
+
+/* ---------- Sequence campaigns: multi-touch flows sharing one code ---------- */
+// Like extractRoster, but also captures each qualifying order's dollar amounts,
+// since sequence campaigns track revenue/discount straight off that one order
+// rather than a rolling window of recurring orders.
+function extractRosterWithAmounts(ordersByName, filterFn){
+  const roster = new Map();
+  for(const order of ordersByName.values()){
+    if(!order.email || !filterFn(order)) continue;
+    const email = order.email.trim().toLowerCase();
+    const created = order.createdAt;
+    const existing = roster.get(email);
+    if(!existing || created < existing.anchorDate){
+      roster.set(email, { anchorDate: created, total: parseFloat(order.total) || 0, discountAmount: parseFloat(order.discountAmount) || 0 });
+    }
+  }
+  return roster;
+}
+// Same genuine-returning logic as the winback flow, adapted for the richer
+// {anchorDate, total, discountAmount} roster value instead of a bare date.
+function filterGenuineReturningRich(rosterMap, subIndex){
+  const kept = new Map();
+  const excluded = [];
+  rosterMap.forEach((info, email) => {
+    const cls = classifyReturning(subIndex.get(email), info.anchorDate);
+    if(cls === 'genuine-returning') kept.set(email, info);
+    else excluded.push({ email, reason: cls, orderDate: info.anchorDate, discountAmount: info.discountAmount || 0, revenue: info.total || 0 });
+  });
+  return { kept, excluded };
+}
+function computeSequenceMetrics(rosterGenuine, subIndex, totalDelivered){
+  const total = rosterGenuine.size;
+  let activeCt = 0, pausedCt = 0, cancelledCt = 0, unmatchedCt = 0;
+  let revenueSum = 0, discountSum = 0;
+  const details = [];
+  rosterGenuine.forEach((info, email) => {
+    const resolved = resolveSub(subIndex.get(email));
+    if(resolved.status === 'active') activeCt++;
+    else if(resolved.status === 'paused') pausedCt++;
+    else if(resolved.status === 'cancelled') cancelledCt++;
+    else unmatchedCt++;
+    revenueSum += info.total || 0;
+    discountSum += info.discountAmount || 0;
+    details.push({ email, orderDate: info.anchorDate, status: resolved.status, revenue: info.total || 0, discountAmount: info.discountAmount || 0 });
+  });
+  details.sort((a,b) => a.email.localeCompare(b.email));
+  return {
+    customers: total, cumulative: total,
+    activePct: total ? (activeCt/total)*100 : 0,
+    pausedPct: total ? (pausedCt/total)*100 : 0,
+    cancelledPct: total ? (cancelledCt/total)*100 : 0,
+    unmatchedCt, revenueSum, discountSum,
+    netReturn: revenueSum - discountSum,
+    conversionRate: totalDelivered ? (total/totalDelivered)*100 : null,
+    details,
+  };
+}
+async function computeTouchpoint(idx){
+  const camp = getCurrentCampaign();
+  if(!camp) return;
+  const tp = (camp.touchpoints || [])[idx];
+  if(!tp || !tp.date){ alert('Set a date for this touchpoint first.'); return; }
+  const up = APP.uploads[idx];
+  if(!up || !up.groupAFiles || !up.subsFiles){
+    alert('Upload the code-usage orders export and the Subscriptions master for ' + (tp.label || ('Touchpoint ' + (idx+1))) + ' first.');
+    return;
+  }
+  APP.busy[idx] = true; render();
+  try{
+    const [dcRows, subsRows] = await Promise.all([
+      parseFiles(up.groupAFiles),
+      parseSubsFiles(up.subsFiles),
+    ]);
+    const dcOrdersByName = groupOrdersByName(dcRows);
+    const codeLower = (camp.code || '').trim().toLowerCase();
+    if(!codeLower){ alert('This campaign has no discount code set — add one on the campaign details before calculating.'); APP.busy[idx]=false; render(); return; }
+
+    const rosterRaw = extractRosterWithAmounts(dcOrdersByName, o => o.tags.toLowerCase().includes(codeLower));
+    const cutoff = getTouchpointCutoff(camp, idx);
+    const rosterAtCutoff = filterByCutoff(rosterRaw, cutoff);
+    const subIndex = buildSubIndex(subsRows);
+    const { kept: rosterGenuine, excluded: excludedNotGenuine } = filterGenuineReturningRich(rosterAtCutoff, subIndex);
+
+    const metrics = computeSequenceMetrics(rosterGenuine, subIndex, camp.totalDelivered);
+    metrics.excludedNotGenuine = excludedNotGenuine;
+    metrics.touchpointLabel = tp.label;
+    metrics.rawCount = rosterAtCutoff.size;
+    metrics.touchpointDate = tp.date;
+    metrics.conversionRateRaw = camp.totalDelivered ? (rosterAtCutoff.size / camp.totalDelivered) * 100 : null;
+    metrics.costPerGenuine = metrics.cumulative > 0 ? metrics.discountSum / metrics.cumulative : null;
+    metrics.discountLeaked = excludedNotGenuine.reduce((sum, e) => sum + (e.discountAmount || 0), 0);
+
+    const prevSnap = idx > 0 ? (APP.snapshots[camp.id] || {})[idx - 1] : null;
+    const prevCumulative = (prevSnap && prevSnap.A) ? prevSnap.A.cumulative : 0;
+    metrics.incremental = metrics.cumulative - prevCumulative;
+
+    if(rosterGenuine.size === 0 && rosterRaw.size > 0) alert('No genuine customers landed in this touchpoint window — double check the touchpoint date and cutoff.');
+    if(rosterRaw.size === 0) alert('No orders matched the code "' + camp.code + '" in Tags. Double check the code and the uploaded file.');
+
+    let saveFailed = false;
+    try{ await storageBackend.set(`snapshot:${camp.id}:${idx}:A`, JSON.stringify(metrics)); }
+    catch(saveErr){ saveFailed = true; console.warn('Could not persist this touchpoint (storage unavailable in this environment):', saveErr); }
+    APP.snapshots[camp.id] = APP.snapshots[camp.id] || {};
+    APP.snapshots[camp.id][idx] = { A: metrics };
+    APP.saveWarning = APP.saveWarning || {};
+    APP.saveWarning[idx] = saveFailed;
+  }catch(e){
+    console.error(e);
+    alert('Something went wrong calculating this touchpoint: ' + e.message);
+  }
+  APP.busy[idx] = false;
+  render();
+}
+function addTouchpoint(){
+  const camp = getCurrentCampaign();
+  if(!camp) return;
+  camp.touchpoints = camp.touchpoints || [];
+  camp.touchpoints.push({ label: `Email ${camp.touchpoints.length + 1}`, date: '' });
+  updateCampaignField('touchpoints', camp.touchpoints);
+  render();
+}
+function removeTouchpoint(idx){
+  const camp = getCurrentCampaign();
+  if(!camp || !camp.touchpoints) return;
+  camp.touchpoints.splice(idx, 1);
+  updateCampaignField('touchpoints', camp.touchpoints);
+  render();
+}
+function updateTouchpointLabel(idx, value){
+  const camp = getCurrentCampaign();
+  if(!camp || !camp.touchpoints || !camp.touchpoints[idx]) return;
+  camp.touchpoints[idx].label = value;
+  updateCampaignField('touchpoints', camp.touchpoints);
+}
+function updateTouchpointDate(idx, iso){
+  const camp = getCurrentCampaign();
+  if(!camp || !camp.touchpoints || !camp.touchpoints[idx]) return;
+  camp.touchpoints[idx].date = iso;
+  updateCampaignField('touchpoints', camp.touchpoints);
+  render();
+}
+function updateTouchpointTime(idx, value){
+  const camp = getCurrentCampaign();
+  if(!camp || !camp.touchpoints || !camp.touchpoints[idx]) return;
+  camp.touchpoints[idx].time = value;
+  updateCampaignField('touchpoints', camp.touchpoints);
+}
+function renderTouchpointCard(camp, idx){
+  const tp = (camp.touchpoints || [])[idx] || { label: `Touchpoint ${idx+1}`, date: '' };
+  const snap = (APP.snapshots[camp.id] || {})[idx] || {};
+  const up = APP.uploads[idx] || {};
+  const busy = !!APP.busy[idx];
+  const calculated = isCalculated(snap, camp);
+  const open = !!(APP.cpOpen && APP.cpOpen[idx]);
+  const maxIdx = getCheckpoints(camp).slice(-1)[0];
+  const accent = weekColor(idx, maxIdx || 1);
+  const tint = weekTint(idx, maxIdx || 1);
+  let html = `<div class="cp-card" style="border-top-color:${accent};">
+    <div class="cp-head" style="background:${tint};color:${accent};cursor:pointer;" onclick="toggleCpOpen(${idx})">
+      <span>${open ? '▾' : '▸'} ${escapeHtml(tp.label)}${tp.date ? ' · ' + fmtDate(tp.date) : ''}</span>
+      <span class="cp-window">${calculated ? '✓ calculated' : (busy ? 'calculating…' : 'not yet calculated')}</span>
+    </div>`;
+  if(open){
+    html += `<div class="cp-body">
+      <div class="form-row-inline"><label>Label</label><input type="text" value="${escapeHtml(tp.label)}" onchange="updateTouchpointLabel(${idx}, this.value)"></div>
+      <div class="form-row-inline"><label>Send date</label>${renderDateField('touchpoint:'+idx, tp.date)}</div>
+      <button class="btn-link" onclick="removeTouchpoint(${idx})">remove this touchpoint</button>
+      ${uploadBlock(idx, 'a', 'Orders using the code', 'Orders export with the DC code — filtered by Tags', 'handleGroupAFiles', up.groupANames)}
+      ${uploadBlock(idx, '', 'Subscriptions master', 'Appstle Subscriptions export — status &amp; genuine-return check', 'handleSubsFiles', up.subsNames)}
+      <button class="btn-compute" onclick="computeCheckpoint(${idx})" ${busy?'disabled':''}>${busy?'Calculating…':'Calculate & save'}</button>
+      ${busy ? '<div class="busy">Parsing files — large exports can take a little while.</div>' : ''}
+      ${calculated ? renderTouchpointResults(snap.A, idx, camp) : (!busy ? '<div class="hint">Set the send date, upload both files, then calculate.</div>' : '')}
+    </div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+function renderSequenceDetailPanel(camp, idx, status){
+  const snap = (APP.snapshots[camp.id] || {})[idx];
+  const details = snap && snap.A && snap.A.details ? snap.A.details.filter(d => d.status === status) : [];
+  let html = `<div class="detail-panel">
+    <div class="detail-head">${status} (${details.length})
+      <a class="drill" onclick="downloadSequenceDetailCsv(${idx}, '${status}')">download CSV</a>
+    </div>`;
+  if(details.length === 0){
+    html += `<div class="hint">No customers in this bucket.</div>`;
+  } else {
+    html += `<div class="detail-scroll"><table class="detail-table"><tr><th>Email</th><th>Ordered</th><th>Status</th><th>Revenue</th><th>Discount</th></tr>`;
+    details.forEach(d => {
+      html += `<tr><td>${escapeHtml(d.email)}</td><td>${fmtDate(d.orderDate)}</td><td>${escapeHtml(d.status)}</td><td>${fmtMoney(d.revenue)}</td><td>${fmtMoney(d.discountAmount)}</td></tr>`;
+    });
+    html += `</table></div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+function downloadSequenceDetailCsv(idx, status){
+  const camp = getCurrentCampaign();
+  if(!camp) return;
+  const snap = (APP.snapshots[camp.id] || {})[idx];
+  if(!snap || !snap.A || !snap.A.details) return;
+  const details = snap.A.details.filter(d => d.status === status);
+  const rows = details.map(d => [d.email, fmtDate(d.orderDate), d.status, d.revenue.toFixed(2), d.discountAmount.toFixed(2)]);
+  const tp = (camp.touchpoints || [])[idx] || {};
+  const name = `${(camp.code||camp.name||'cohort').replace(/\s+/g,'_')}_${(tp.label||'touchpoint'+(idx+1)).replace(/\s+/g,'_')}_${status}.csv`;
+  downloadRows(name, ['Email','Order date','Status','Revenue','Discount'], rows);
+}
+function renderTouchpointResults(m, idx, camp){
+  let html = '';
+  ['active','paused','cancelled'].forEach(status => {
+    const key = `${idx}_A_${status}`;
+    const open = !!APP.detailOpen[key];
+    const count = (m.details || []).filter(d => d.status === status).length;
+    html += `<div class="hint">${status.charAt(0).toUpperCase()+status.slice(1)}: ${count} <a class="drill" onclick="toggleDetail(${idx}, 'A', '${status}')">${open?'hide':'view emails'}</a></div>`;
+    if(open) html += renderSequenceDetailPanel(camp, idx, status);
+  });
+  if(m.excludedNotGenuine && m.excludedNotGenuine.length > 0){
+    const byReason = {};
+    m.excludedNotGenuine.forEach(e => { byReason[e.reason] = (byReason[e.reason]||0) + 1; });
+    const breakdown = Object.entries(byReason).map(([r,n]) => `${n} ${r}`).join(', ');
+    const key = `${idx}_A_notgenuine`;
+    const open = !!APP.detailOpen[key];
+    html += `<div class="warn">🧹 Excluded as not genuine winbacks — ${m.excludedNotGenuine.length} total (${breakdown}). <a class="drill" onclick="toggleDetail(${idx}, 'A', 'notgenuine')">${open?'hide':'view emails'}</a></div>`;
+    if(open) html += renderExcludedPanel(idx, m.excludedNotGenuine);
+  }
+  return html;
+}
+
+
+function toggleDetail(week, group, status){
+  const key = `${week}_${group}_${status}`;
+  APP.detailOpen[key] = !APP.detailOpen[key];
+  render();
+}
+function detailsFor(camp, week, group, status){
+  const snap = (APP.snapshots[camp.id] || {})[week];
+  if(!snap || !snap[group] || !snap[group].details) return [];
+  return status === 'all' ? snap[group].details : snap[group].details.filter(d => d.status === status);
+}
+function downloadRows(filename, headerRow, rows){
+  const lines = [headerRow.join(',')];
+  rows.forEach(r => lines.push(r.map(v => {
+    const s = String(v === undefined || v === null ? '' : v);
+    return /[,"\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+  }).join(',')));
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+function downloadDetailCsv(week, group, status){
+  const camp = getCurrentCampaign();
+  if(!camp) return;
+  const rows = detailsFor(camp, week, group, status).map(d => [d.email, fmtDate(d.orderDate), d.frequencyLabel, d.status, d.actual.toFixed(2), d.expected.toFixed(2), d.variance.toFixed(2), d.revenue.toFixed(2), fmtDate(d.checkpointDate), d.incomplete ? 'yes':'']);
+  const name = `${(camp.code||camp.name||'cohort').replace(/\s+/g,'_')}_wk${week}_group${group}_${status}.csv`;
+  downloadRows(name, ['Email','Order date','Frequency','Status','Orders (actual)','Orders (expected)','Variance','Revenue','Checkpoint date','Incomplete'], rows);
+}
+function downloadFullCheckpointCsv(week){
+  const camp = getCurrentCampaign();
+  if(!camp) return;
+  const snap = (APP.snapshots[camp.id] || {})[week];
+  if(!snap || !snap.A || !snap.B){ alert('Calculate Week ' + week + ' first.'); return; }
+  const rows = [];
+  ['A','B'].forEach(group => {
+    (snap[group].details || []).forEach(d => {
+      rows.push([d.email, group, fmtDate(d.orderDate), d.frequencyLabel, d.status, d.actual.toFixed(2), d.expected.toFixed(2), d.variance.toFixed(2), d.revenue.toFixed(2), fmtDate(d.checkpointDate), d.incomplete ? 'yes':'']);
+    });
+  });
+  const name = `${(camp.code||camp.name||'cohort').replace(/\s+/g,'_')}_wk${week}_full_list.csv`;
+  downloadRows(name, ['Email','Group','Order date','Frequency','Status','Orders (actual)','Orders (expected)','Variance','Revenue','Checkpoint date','Incomplete'], rows);
+}
+function downloadSummaryCsv(){
+  const camp = getCurrentCampaign();
+  if(!camp) return;
+  const checkpoints = getCheckpoints(camp);
+  const snaps = APP.snapshots[camp.id] || {};
+  const rows = [
+    ['# of Customers','customers'], ['% Still Active','activePct'],
+    ['Avg Orders (actual)','avgActual'], ['Avg Expected Orders','avgExpected'],
+    ['Avg Variance','avgVariance'],
+    ['% Paused','pausedPct'], ['% Cancelled','cancelledPct'],
+    ['Unmatched vs subs master','unmatchedCt'], ['Incomplete checkpoints','incompleteCt'],
+  ];
+  let lines = [];
+  let header1 = [''];
+  checkpoints.forEach(w => { header1.push(`Week ${w} - Group A`); header1.push(`Week ${w} - Group B`); });
+  lines.push(header1.join(','));
+  rows.forEach(([label, key]) => {
+    let line = [label];
+    checkpoints.forEach(w => {
+      const snap = snaps[w];
+      const a = snap && snap.A ? snap.A[key] : '';
+      const b = snap && snap.B ? snap.B[key] : '';
+      line.push(a === '' || a === undefined ? '' : (typeof a === 'number' ? a.toFixed(2) : a));
+      line.push(b === '' || b === undefined ? '' : (typeof b === 'number' ? b.toFixed(2) : b));
+    });
+    lines.push(line.join(','));
+  });
+  const roiRows = [
+    ['Discount cost (genuine)','discountCostGenuine'], ['Discount cost (leaked to excluded)','discountCostWasted'],
+    ['Net return (revenue - discount cost)','netReturn'], ['Return ratio ($ spent per $1 discount)','returnRatio'],
+  ];
+  roiRows.forEach(([label, key]) => {
+    let line = [label];
+    checkpoints.forEach(w => {
+      const snap = snaps[w];
+      const v = snap && snap.A && snap.A.roi ? snap.A.roi[key] : '';
+      line.push(v === '' || v === null || v === undefined ? '' : Number(v).toFixed(2));
+      line.push('');
+    });
+    lines.push(line.join(','));
+  });
+  const convRows = [
+    ['Conversion rate % (raw)','conversionRateRaw'], ['Conversion rate % (genuine only)','conversionRateGenuine'],
+  ];
+  convRows.forEach(([label, key]) => {
+    let line = [label];
+    checkpoints.forEach(w => {
+      const snap = snaps[w];
+      const v = snap && snap.A ? snap.A[key] : '';
+      line.push(v === '' || v === null || v === undefined ? '' : Number(v).toFixed(2));
+      line.push('');
+    });
+    lines.push(line.join(','));
+  });
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${(camp.code || camp.name || 'cohort').replace(/\s+/g,'_')}_summary.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* ---------- rendering ---------- */
+function render(){
+  const root = document.getElementById('root');
+  root.innerHTML = APP.currentId ? renderDashboard() : renderHome();
+}
+
+function renderHome(){
+  let html = `<div class="hero"><h1>🍃 Cohort Ledger</h1><p class="tag">Winback &amp; retention cohort tracking for Funky Food campaigns</p></div>`;
+  html += `<button class="btn-primary" onclick="toggleForm()">${APP.showForm ? 'Cancel' : '+ New campaign'}</button>`;
+  if(APP.showForm) html += renderNewForm();
+  html += `<div class="campaign-grid">`;
+  if(APP.campaigns.length === 0 && !APP.showForm){
+    html += `<div class="empty">No campaigns yet. Start one above to build your first cohort snapshot.</div>`;
+  }
+  APP.campaigns.forEach(c => {
+    const due = nextDueCheckpoint(c.id, c);
+    const isSeq = c.cadence === 'sequence';
+    const totalCheckpoints = getCheckpoints(c).length;
+    const dueLabel = due ? (isSeq ? ((c.touchpoints||[])[due.week]||{}).label || `Touchpoint ${due.week+1}` : `Week ${due.week}`) : '';
+    html += `<div class="camp-card" onclick="openCampaign('${c.id}')">
+      <div class="camp-code">${escapeHtml(c.code || c.name || 'Untitled')}</div>
+      <div class="camp-meta">${escapeHtml(c.channel || '')}</div>
+      <div class="camp-meta">Sent ${fmtDate(c.weekSentDate)}</div>
+      <div class="camp-due">${due ? `Next: ${dueLabel} · ${due.date ? fmtDate(due.date) : 'set date'}` : `✓ All ${totalCheckpoints} calculated`}</div>
+    </div>`;
+  });
+  html += `</div>`;
+  return html;
+}
+
+function renderNewForm(){
+  const f = APP.newFormData || {};
+  return `<div class="form-card">
+    <div class="form-row"><label>Campaign name</label><input type="text" placeholder="e.g. STAYFUNKY50" value="${escapeHtml(f.name||'')}" onchange="updateNewForm('name', this.value)"></div>
+    <div class="form-row"><label>Code used</label><input type="text" placeholder="e.g. STAYFUNKY50" value="${escapeHtml(f.code||'')}" onchange="updateNewForm('code', this.value)"></div>
+    <div class="form-hint">Matched against the Tags column on Group A orders — case-insensitive.</div>
+    <div class="form-row"><label>Channel</label><input type="text" placeholder="e.g. SMS (7,516 recipients) + Email" value="${escapeHtml(f.channel||'')}" onchange="updateNewForm('channel', this.value)"></div>
+    <div class="form-row"><label>Week sent</label>${renderDateField('form:weekSentDate', f.weekSentDate)}</div>
+    <div class="form-row-split">
+      <div class="form-row"><label>Same-window start</label>${renderDateField('form:sameWindowStart', f.sameWindowStart)}</div>
+      <div class="form-row"><label>Same-window end</label>${renderDateField('form:sameWindowEnd', f.sameWindowEnd)}</div>
+    </div>
+    <div class="form-hint">Group B (organic joiners) is only counted if their order falls inside this date range.</div>
+    <div class="form-row"><label>Tracking cadence</label>
+      <select onchange="updateNewForm('cadence', this.value)">
+        <option value="milestone" ${!f.cadence || f.cadence==='milestone'?'selected':''}>Frequency — Week 4, 8, 12</option>
+        <option value="weekly" ${f.cadence==='weekly'?'selected':''}>Weekly — Week 1 through 8</option>
+        <option value="sequence" ${f.cadence==='sequence'?'selected':''}>Sequence — multiple emails, one code (add dates after creating)</option>
+      </select>
+    </div>
+    <div class="form-hint">Pick weekly for ongoing inactives-style monitoring, frequency for a lighter one-off check, or sequence for a short run of follow-up emails sharing one code.</div>
+    <div class="form-row"><label>Total delivered</label><input type="number" value="${escapeHtml(f.totalDelivered||'')}" onchange="updateNewForm('totalDelivered', this.value)"></div>
+    <div class="form-hint">Actives / first-timers who used the code no longer need entering here — the tool now works that out itself from the CSVs and shows it per checkpoint.</div>
+    <button class="btn-primary" onclick="submitNewForm()">Create campaign</button>
+  </div>`;
+}
+
+function renderTouchpointManager(camp){
+  const touchpoints = camp.touchpoints || [];
+  let html = `<div class="touchpoint-manager">
+    <div class="lbl" style="margin-bottom:8px;">Touchpoints (emails in this sequence, in order)</div>`;
+  touchpoints.forEach((tp, idx) => {
+    html += `<div class="touchpoint-row">
+      <input type="text" value="${escapeHtml(tp.label)}" onchange="updateTouchpointLabel(${idx}, this.value)">
+      ${renderDateField('touchpoint:'+idx, tp.date)}
+      <input type="time" value="${escapeHtml(tp.time||'')}" onchange="updateTouchpointTime(${idx}, this.value)" title="Actual send time — defaults to start of day if left blank">
+      <button class="btn-link" onclick="removeTouchpoint(${idx})">remove</button>
+    </div>`;
+  });
+  html += `<button class="btn-secondary" onclick="addTouchpoint()" style="margin-top:4px;">+ Add touchpoint</button>
+  <div class="form-hint" style="margin-top:6px;">Set the actual send time if there's a delay between scheduling and delivery — an order right after a scheduled 5pm send but before the real send time still counts toward the previous touchpoint.</div>
+  </div>`;
+  return html;
+}
+function renderDashboard(){
+  const camp = getCurrentCampaign();
+  if(!camp){ APP.currentId = null; return renderHome(); }
+  const isSeq = camp.cadence === 'sequence';
+  const totalsSnap = isSeq ? lastCalculatedSnapshot(camp) : firstCalculatedSnapshot(camp);
+  let html = `<button class="btn-link" onclick="goHome()">&larr; All campaigns</button>`;
+  html += `<div class="info-card">
+    <h2>${escapeHtml(camp.name)}</h2>
+    <div class="info-grid">
+      <div><span class="lbl">Code used</span><input class="val-edit" type="text" value="${escapeHtml(camp.code || '')}" onchange="updateCampaignField('code', this.value.trim())"></div>
+      <div><span class="lbl">Channel</span><span class="val">${escapeHtml(camp.channel || '—')}</span></div>
+      <div><span class="lbl">Week sent</span><span class="val">${fmtDate(camp.weekSentDate)}</span></div>
+      ${isSeq
+        ? `<div><span class="lbl">Code expiry (last touchpoint cutoff)</span>${renderDateField('campaign:expiryDate', camp.expiryDate, 'val-edit')}</div>`
+        : `<div><span class="lbl">Same-window start</span>${renderDateField('campaign:sameWindowStart', camp.sameWindowStart, 'val-edit')}</div>
+      <div><span class="lbl">Same-window end</span>${renderDateField('campaign:sameWindowEnd', camp.sameWindowEnd, 'val-edit')}</div>`}
+      <div><span class="lbl">Total delivered</span><span class="val">${fmtInt(camp.totalDelivered)}</span></div>
+      <div><span class="lbl">Code users (total)</span><span class="val">${totalsSnap ? fmtInt(totalsSnap.A.rawCount) : '—'}</span></div>
+      <div><span class="lbl">Not eligible (excluded)</span><span class="val">${totalsSnap ? fmtInt(totalsSnap.A.excludedNotGenuine ? totalsSnap.A.excludedNotGenuine.length : 0) : '—'}</span></div>
+      <div><span class="lbl">Tracking cadence</span><select class="val-edit" onchange="updateCampaignField('cadence', this.value); render();">
+        <option value="milestone" ${camp.cadence !== 'weekly' && camp.cadence !== 'sequence' ? 'selected' : ''}>Frequency — Week 4, 8, 12</option>
+        <option value="weekly" ${camp.cadence === 'weekly' ? 'selected' : ''}>Weekly — Week 1 through 8</option>
+        <option value="sequence" ${camp.cadence === 'sequence' ? 'selected' : ''}>Sequence — multiple emails, one code</option>
+      </select></div>
+    </div>
+    <div class="form-hint" style="margin-top:10px;">Everything above is editable here — no need to recreate the campaign if something needs fixing.</div>
+  </div>`;
+  html += renderSummaryTable(camp);
+  if(isSeq) html += `<div class="summary-card">${renderTouchpointManager(camp)}</div>`;
+  html += `<button class="btn-secondary" onclick="downloadSummaryCsv()">Download summary as CSV</button>`;
+  html += `<div class="checkpoints">`;
+  getCheckpoints(camp).forEach(week => { html += renderCheckpointCard(camp, week); });
+  html += `</div>`;
+  return html;
+}
+
+function toggleCpOpen(week){
+  APP.cpOpen = APP.cpOpen || {};
+  APP.cpOpen[week] = !APP.cpOpen[week];
+  render();
+}
+function renderCheckpointCard(camp, week){
+  if(camp.cadence === 'sequence') return renderTouchpointCard(camp, week);
+  const snap = (APP.snapshots[camp.id] || {})[week] || {};
+  const up = APP.uploads[week] || {};
+  const busy = !!APP.busy[week];
+  const calculated = isCalculated(snap, camp);
+  const open = !!(APP.cpOpen && APP.cpOpen[week]);
+  const maxWeek = getCheckpoints(camp).slice(-1)[0];
+  const accent = weekColor(week, maxWeek);
+  const tint = weekTint(week, maxWeek);
+  let html = `<div class="cp-card" style="border-top-color:${accent};">
+    <div class="cp-head" style="background:${tint};color:${accent};cursor:pointer;" onclick="toggleCpOpen(${week})">
+      <span>${open ? '▾' : '▸'} Week ${week}</span>
+      <span class="cp-window">${calculated ? '✓ calculated' : (busy ? 'calculating…' : `due ~${estimateCheckpointDate(camp, week) ? fmtDate(estimateCheckpointDate(camp, week)) : '—'}`)}</span>
+    </div>`;
+  if(open){
+    html += `<div class="cp-body">
+      ${uploadBlock(week, 'a', 'Group A orders (discount)', 'Orders export with the DC code — filtered by Tags', 'handleGroupAFiles', up.groupANames)}
+      ${uploadBlock(week, 'b', 'Group B orders (organic)', 'Orders export for same-window joiners', 'handleGroupBFiles', up.groupBNames)}
+      ${uploadBlock(week, '', 'Subscriptions master', 'Appstle Subscriptions export — status &amp; frequency', 'handleSubsFiles', up.subsNames)}
+      ${uploadBlock(week, '', 'Orders Data', 'All orders in range — can be multiple files/parts', 'handleOrdersFiles', up.ordersNames)}
+      <div class="fallback-row"><span>Fallback days (if not in subs file)</span><input type="number" value="${up.fallbackDays||7}" onchange="setFallbackDays(${week}, this.value)"></div>
+      <button class="btn-compute" onclick="computeCheckpoint(${week})" ${busy?'disabled':''}>${busy?'Calculating…':'Calculate & save'}</button>
+      ${busy ? '<div class="busy">Parsing files — large exports can take a little while.</div>' : ''}
+      ${calculated ? renderCheckpointResults(snap, week, camp) : (!busy ? '<div class="hint">Upload all four files, then calculate.</div>' : '')}
+    </div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+function uploadBlock(week, groupClass, label, sub, handler, fileNames){
+  const cls = groupClass === 'a' ? 'up-block up-block-a' : (groupClass === 'b' ? 'up-block up-block-b' : 'up-block');
+  let html = `<div class="${cls}">
+    <div class="up-label">${label}</div>
+    <div class="up-sub">${sub}</div>
+    <input type="file" accept=".csv" multiple onchange="${handler}(event, ${week})">`;
+  if(fileNames && fileNames.length){
+    html += `<div class="file-name">${fileNames.map(escapeHtml).join('<br>')}</div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+function renderRoiCard(snap){
+  if(!snap.A.roi) return '';
+  const roi = snap.A.roi;
+  const rows = [
+    [`Discount cost (genuine, ${snap.A.customers})`, fmtMoney(roi.discountCostGenuine), ''],
+    [`Discount leaked (excluded, ${snap.A.excludedNotGenuine ? snap.A.excludedNotGenuine.length : 0})`, fmtMoney(roi.discountCostWasted), ''],
+    ['Revenue from genuine returning customers', fmtMoney(snap.A.totalRevenue), ''],
+    ['Net return (revenue − discount cost)', fmtMoney(roi.netReturn), roi.netReturn < 0 ? 'neg' : 'pos'],
+    ['Conversion rate (raw, all DC users)', snap.A.conversionRateRaw !== null ? fmtPct(snap.A.conversionRateRaw) : '— set Total Delivered', ''],
+    ['Conversion rate (genuine only)', snap.A.conversionRateGenuine !== null ? fmtPct(snap.A.conversionRateGenuine) : '— set Total Delivered', ''],
+  ];
+  let html = `<table class="summary-table roi-table">`;
+  rows.forEach(([label, val, cls]) => {
+    html += `<tr><td class="rowlabel">${label}</td><td class="${cls}">${val}</td></tr>`;
+  });
+  html += `<tr><td class="rowlabel">Ave. cost per genuine conversion</td><td><b>${roi.costPerGenuine !== null ? fmtMoney(roi.costPerGenuine) : '—'}</b></td></tr>`;
+  html += `<tr><td colspan="2" class="roi-subnote">(${fmtMoney(roi.discountCostGenuine)} discount cost ÷ ${roi.genuineCount} genuine customers = ${roi.costPerGenuine !== null ? fmtMoney(roi.costPerGenuine) : '—'} per customer won back)</td></tr>`;
+  html += `</table>`;
+  return html;
+}
+function renderCheckpointResults(snap, week, camp){
+  let html = `<table class="results-table">
+    <tr><th></th><th>Group A</th><th>Group B</th></tr>
+    <tr><td># of Customers</td><td>${fmtInt(snap.A.customers)}</td><td>${fmtInt(snap.B.customers)}</td></tr>
+    <tr><td>% Still Active</td><td>${statusCell(week,'A','active',snap.A.activePct)}</td><td>${statusCell(week,'B','active',snap.B.activePct)}</td></tr>
+    <tr><td>Avg Orders (actual)</td><td>${fmtNum(snap.A.avgActual)}</td><td>${fmtNum(snap.B.avgActual)}</td></tr>
+    <tr><td>Avg Expected Orders</td><td>${fmtNum(snap.A.avgExpected)}</td><td>${fmtNum(snap.B.avgExpected)}</td></tr>
+    <tr><td>Avg Variance</td><td class="${snap.A.avgVariance < 0 ? 'neg':'pos'}">${deltaLabel(snap.A.avgVariance)}</td><td class="${snap.B.avgVariance < 0 ? 'neg':'pos'}">${deltaLabel(snap.B.avgVariance)}</td></tr>
+    <tr><td>% Paused</td><td>${statusCell(week,'A','paused',snap.A.pausedPct)}</td><td>${statusCell(week,'B','paused',snap.B.pausedPct)}</td></tr>
+    <tr><td>% Cancelled</td><td>${statusCell(week,'A','cancelled',snap.A.cancelledPct)}</td><td>${statusCell(week,'B','cancelled',snap.B.cancelledPct)}</td></tr>
+  </table>`;
+  ['A','B'].forEach(group => {
+    ['active','paused','cancelled'].forEach(status => {
+      const key = `${week}_${group}_${status}`;
+      if(APP.detailOpen[key]) html += renderDetailPanel(camp, week, group, status);
+    });
+  });
+  html += `<div class="window-note">Checkpoint window spans <b>${fmtDate(snap.A.earliestCP)}</b> to <b>${fmtDate(snap.A.latestCP)}</b> for Group A, and <b>${fmtDate(snap.B.earliestCP)}</b> to <b>${fmtDate(snap.B.latestCP)}</b> for Group B — that's the safe range to pull your next export from.</div>`;
+  if(snap.A.unmatchedCt > 0 || snap.B.unmatchedCt > 0){
+    html += `<div class="warn">⚠ Not found in Subscriptions master — Group A: ${snap.A.unmatchedCt}, Group B: ${snap.B.unmatchedCt}.</div>`;
+  }
+  if(snap.A.excludedNotGenuine && snap.A.excludedNotGenuine.length > 0){
+    const key = `${week}_A_notgenuine`;
+    const open = !!APP.detailOpen[key];
+    const byReason = {};
+    snap.A.excludedNotGenuine.forEach(e => { byReason[e.reason] = (byReason[e.reason]||0) + 1; });
+    const breakdown = Object.entries(byReason).map(([r,n]) => `${n} ${r}`).join(', ');
+    html += `<div class="warn">🧹 Excluded from Group A as not genuine winbacks — ${snap.A.excludedNotGenuine.length} total (${breakdown}). <a class="drill" onclick="toggleDetail(${week}, 'A', 'notgenuine')">${open ? 'hide' : 'view emails'}</a></div>`;
+    if(open) html += renderExcludedPanel(week, snap.A.excludedNotGenuine);
+  }
+  if(snap.B.candidatePoolSize !== undefined){
+    html += `<div class="hint">Group B matched ${snap.B.customers} of ${snap.B.candidatePoolSize} candidates to mirror Group A's frequency mix exactly.</div>`;
+  }
+  if(snap.B.matchShortfalls && snap.B.matchShortfalls.length > 0){
+    const lines = snap.B.matchShortfalls.map(s => `${s.label}: needed ${s.needed}, only ${s.available} available`).join('; ');
+    html += `<div class="warn">⚠ Group B couldn't fully match Group A's frequency mix — ${lines}. Group B is short by ${snap.B.matchShortfalls.reduce((s,x)=>s+(x.needed-x.available),0)} customers in those buckets.</div>`;
+  }
+  if(snap.A.incompleteCt > 0 || snap.B.incompleteCt > 0){
+    html += `<div class="warn">⏳ Checkpoint not yet fully covered by Orders Data — Group A: ${snap.A.incompleteCt}, Group B: ${snap.B.incompleteCt} customers. Their numbers may rise once you pull a later export.</div>`;
+  }
+  if(APP.saveWarning && APP.saveWarning[week]){
+    html += `<div class="warn">💾 This result is showing but couldn't be saved for next time — your browser may be blocking local storage (private/incognito mode, or storage disabled). Keep this tab open, or export the CSV below before closing it.</div>`;
+  }
+  html += `<button class="btn-secondary" style="width:100%;margin-top:10px;" onclick="downloadFullCheckpointCsv(${week})">Download full customer list (both groups)</button>`;
+  return html;
+}
+function statusCell(week, group, status, pct){
+  const key = `${week}_${group}_${status}`;
+  const open = !!APP.detailOpen[key];
+  return `${fmtPct(pct)} <a class="drill" onclick="toggleDetail(${week}, '${group}', '${status}')">${open ? 'hide' : 'view emails'}</a>`;
+}
+function renderExcludedPanel(week, excludedList){
+  const hasRevenue = excludedList.length > 0 && excludedList[0].revenue !== undefined;
+  const hasDiscount = excludedList.length > 0 && excludedList[0].discountAmount !== undefined;
+  let html = `<div class="detail-panel">
+    <div class="detail-head">Excluded from Group A (${excludedList.length})
+      <span>
+        <a class="drill" onclick="downloadExcludedCsv(${week})">download CSV</a>
+        <a class="drill" onclick="downloadSegmentHygieneCsv(${week})">export segment flags</a>
+      </span>
+    </div>
+    <div class="detail-scroll"><table class="detail-table"><tr><th>Email</th><th>Ordered</th><th>Reason</th>${hasRevenue?'<th>Spent</th>':''}${hasDiscount?'<th>Discount</th>':''}</tr>`;
+  excludedList.forEach(e => {
+    html += `<tr><td>${escapeHtml(e.email)}</td><td>${fmtDate(e.orderDate)}</td><td>${escapeHtml(e.reason)}</td>${hasRevenue?`<td>${fmtMoney(e.revenue||0)}</td>`:''}${hasDiscount?`<td>${fmtMoney(e.discountAmount||0)}</td>`:''}</tr>`;
+  });
+  html += `</table></div></div>`;
+  return html;
+}
+function downloadExcludedCsv(week){
+  const camp = getCurrentCampaign();
+  if(!camp) return;
+  const snap = (APP.snapshots[camp.id] || {})[week];
+  if(!snap || !snap.A || !snap.A.excludedNotGenuine) return;
+  const list = snap.A.excludedNotGenuine;
+  const hasRevenue = list.length > 0 && list[0].revenue !== undefined;
+  const hasDiscount = list.length > 0 && list[0].discountAmount !== undefined;
+  const header = ['Email','Order date','Reason', ...(hasRevenue?['Spent']:[]), ...(hasDiscount?['Discount']:[])];
+  const rows = list.map(e => [e.email, fmtDate(e.orderDate), e.reason, ...(hasRevenue?[(e.revenue||0).toFixed(2)]:[]), ...(hasDiscount?[(e.discountAmount||0).toFixed(2)]:[])]);
+  const name = `${(camp.code||camp.name||'cohort').replace(/\s+/g,'_')}_wk${week}_excluded_not_genuine.csv`;
+  downloadRows(name, header, rows);
+}
+const HYGIENE_EXPLANATIONS = {
+  'first-time': 'No subscription existed before this order — this contact was a brand-new signup, not a lapsed customer. If they were in the "inactive" segment, segment criteria may be including new customers.',
+  'already-active': 'This subscription was active with no pause or cancellation before the code was used — this contact was never actually inactive. If they were in the "inactive" segment, segment criteria may be including active subscribers.',
+  'unmatched': 'No matching record in the Subscriptions master — inactive status could not be verified for this contact.',
+};
+// A version of the excluded list formatted as evidence for segment cleanup —
+// same underlying data as the exclusion export, but with plain-language notes
+// per reason so it's ready to hand off directly, matching the note style
+// already used in the Klaviyo attribution audit.
+function downloadSegmentHygieneCsv(week){
+  const camp = getCurrentCampaign();
+  if(!camp) return;
+  const snap = (APP.snapshots[camp.id] || {})[week];
+  if(!snap || !snap.A || !snap.A.excludedNotGenuine) return;
+  const list = snap.A.excludedNotGenuine;
+  const hasRevenue = list.length > 0 && list[0].revenue !== undefined;
+  const hasDiscount = list.length > 0 && list[0].discountAmount !== undefined;
+  const header = ['Email','Order date','Flag', ...(hasRevenue?['Spent']:[]), ...(hasDiscount?['Discount']:[]), 'Why this suggests a segment issue'];
+  const rows = list.map(e => [e.email, fmtDate(e.orderDate), e.reason, ...(hasRevenue?[(e.revenue||0).toFixed(2)]:[]), ...(hasDiscount?[(e.discountAmount||0).toFixed(2)]:[]), HYGIENE_EXPLANATIONS[e.reason] || '']);
+  const name = `${(camp.code||camp.name||'cohort').replace(/\s+/g,'_')}_wk${week}_segment_hygiene_flags.csv`;
+  downloadRows(name, header, rows);
+}
+function renderDetailPanel(camp, week, group, status){
+  const rows = detailsFor(camp, week, group, status);
+  const label = group === 'A' ? 'Group A' : 'Group B';
+  let html = `<div class="detail-panel">
+    <div class="detail-head">${label} — ${status} (${rows.length})
+      <a class="drill" onclick="downloadDetailCsv(${week}, '${group}', '${status}')">download CSV</a>
+    </div>`;
+  if(rows.length === 0){
+    html += `<div class="hint">No customers in this bucket.</div>`;
+  } else {
+    html += `<div class="detail-scroll"><table class="detail-table"><tr><th>Email</th><th>Ordered</th><th>Frequency</th><th>Orders</th><th>Expected</th><th>Variance</th><th>Revenue</th><th></th></tr>`;
+    rows.forEach(d => {
+      html += `<tr><td>${escapeHtml(d.email)}</td><td>${fmtDate(d.orderDate)}</td><td>${escapeHtml(d.frequencyLabel)}</td><td>${fmtNum(d.actual)}</td><td>${fmtNum(d.expected)}</td><td class="${d.variance<0?'neg':'pos'}">${deltaLabel(d.variance)}</td><td>${fmtMoney(d.revenue)}</td><td>${d.incomplete?'⏳':''}</td></tr>`;
+    });
+    html += `</table></div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+function renderSequenceSummary(camp){
+  const snaps = APP.snapshots[camp.id] || {};
+  const checkpoints = getCheckpoints(camp);
+  const maxIdx = checkpoints.slice(-1)[0] || 1;
+  const touchpoints = camp.touchpoints || [];
+  let html = `<div class="summary-card"><h3>Funnel summary</h3>
+    <div class="legend">Cumulative genuine customers who'd used <b>${escapeHtml(camp.code||'the code')}</b> by each touchpoint's cutoff, and how many were added since the previous one.</div>
+    <div class="legend">Cost = discount given to genuine customers &nbsp;·&nbsp; Leaked = discount given to excluded (not genuine) customers &nbsp;·&nbsp; Raw % / Genuine % = conversion rate before/after the genuine filter</div>
+    <div class="summary-scroll"><table class="summary-table">
+    <tr>
+      <th>Touchpoint</th>
+      <th>Cumulative</th>
+      <th>Added</th>
+      <th title="% still active">Active</th>
+      <th title="Discount cost — genuine customers only">Cost</th>
+      <th title="Discount leaked to excluded (not genuine) customers">Leaked</th>
+      <th title="Revenue from genuine customers">Revenue</th>
+      <th title="Revenue minus discount cost">Net return</th>
+      <th title="Conversion rate — raw, all DC users">Raw %</th>
+      <th title="Conversion rate — genuine only">Genuine %</th>
+      <th title="Discount cost ÷ genuine customers">Ave. per conv.</th>
+    </tr>`;
+  const calculatedIdx = checkpoints.filter(i => snaps[i] && snaps[i].A);
+  if(calculatedIdx.length === 0){
+    html += `<tr><td colspan="11" class="rowlabel">No touchpoints calculated yet.</td></tr>`;
+  }
+  calculatedIdx.forEach(i => {
+    const m = snaps[i].A;
+    const tp = touchpoints[i] || {};
+    const accent = weekColor(i, maxIdx);
+    html += `<tr style="border-left:3px solid ${accent};">
+      <td class="rowlabel">${escapeHtml(tp.label || ('Touchpoint '+(i+1)))}${tp.date ? ' · '+fmtDate(tp.date) : ''}</td>
+      <td>${fmtInt(m.cumulative)}</td>
+      <td class="${m.incremental<0?'neg':'pos'}">+${fmtInt(m.incremental)}</td>
+      <td>${fmtPct(m.activePct)}</td>
+      <td>${fmtMoney(m.discountSum)}</td>
+      <td>${m.discountLeaked !== null && m.discountLeaked !== undefined ? fmtMoney(m.discountLeaked) : '—'}</td>
+      <td>${fmtMoney(m.revenueSum)}</td>
+      <td class="${m.netReturn<0?'neg':'pos'}">${fmtMoney(m.netReturn)}</td>
+      <td>${m.conversionRateRaw !== null && m.conversionRateRaw !== undefined ? fmtPct(m.conversionRateRaw) : '—'}</td>
+      <td>${m.conversionRate !== null && m.conversionRate !== undefined ? fmtPct(m.conversionRate) : '—'}</td>
+      <td><b>${m.costPerGenuine !== null && m.costPerGenuine !== undefined ? fmtMoney(m.costPerGenuine) : '—'}</b></td>
+    </tr>`;
+  });
+  html += `</table></div>`;
+  if(calculatedIdx.length > 0){
+    const lastIdx = calculatedIdx[calculatedIdx.length - 1];
+    const t = snaps[lastIdx].A;
+    html += `<div class="roi-card" style="margin-top:12px;">
+      <div class="roi-verdict pos" style="font-size:14px;">Totals (as of the last touchpoint)</div>
+      <div class="roi-grid">
+        <div><span class="lbl">Total genuine customers</span><span class="val">${fmtInt(t.cumulative)}</span></div>
+        <div><span class="lbl">Total conversion rate (raw)</span><span class="val">${t.conversionRateRaw !== null && t.conversionRateRaw !== undefined ? fmtPct(t.conversionRateRaw) : '—'}</span></div>
+        <div><span class="lbl">Total conversion rate (genuine)</span><span class="val">${t.conversionRate !== null && t.conversionRate !== undefined ? fmtPct(t.conversionRate) : '—'}</span></div>
+        <div><span class="lbl">Total discount cost</span><span class="val">${fmtMoney(t.discountSum)}</span></div>
+        <div><span class="lbl">Total discount leaked</span><span class="val">${t.discountLeaked !== null && t.discountLeaked !== undefined ? fmtMoney(t.discountLeaked) : '—'}</span></div>
+        <div><span class="lbl">Total revenue (genuine)</span><span class="val">${fmtMoney(t.revenueSum)}</span></div>
+        <div><span class="lbl">Total net return</span><span class="val ${t.netReturn<0?'neg':'pos'}">${fmtMoney(t.netReturn)}</span></div>
+      </div>
+    </div>`;
+  }
+  calculatedIdx.forEach(i => {
+    const m = snaps[i].A;
+    const tp = touchpoints[i] || {};
+    if(m.costPerGenuine !== null && m.costPerGenuine !== undefined){
+      html += `<div class="roi-formula">${escapeHtml(tp.label || ('Touchpoint '+(i+1)))}: ${fmtMoney(m.discountSum)} discount cost ÷ ${m.cumulative} genuine customers = <b>${fmtMoney(m.costPerGenuine)}</b> per customer won back</div>`;
+    }
+  });
+  html += `</div>`;
+  return html;
+}
+function renderSummaryTable(camp){
+  if(camp.cadence === 'sequence') return renderSequenceSummary(camp);
+  const snaps = APP.snapshots[camp.id] || {};
+  const checkpoints = getCheckpoints(camp);
+  const maxWeek = checkpoints.slice(-1)[0];
+  const metricCols = [
+    ['# of Customers','customers', fmtInt],
+    ['% Still Active','activePct', fmtPct],
+    ['Avg Orders (actual)','avgActual', fmtNum],
+    ['Avg Expected Orders','avgExpected', fmtNum],
+    ['Avg Variance','avgVariance', deltaLabel],
+    ['% Paused','pausedPct', fmtPct],
+    ['% Cancelled','cancelledPct', fmtPct],
+  ];
+  let html = `<div class="summary-card"><h3>Full summary</h3>
+    <div class="legend"><b>Group A</b> = genuine returning customers who used the discount code &nbsp;·&nbsp; <b>Group B</b> = frequency-matched organic customers, no code, same join window</div>
+    <div class="summary-scroll"><table class="summary-table">
+    <tr><th>Week</th><th>Group</th>${metricCols.map(([label]) => `<th>${label}</th>`).join('')}</tr>`;
+  const calculatedWeeks = checkpoints.filter(w => snaps[w] && snaps[w].A && snaps[w].B);
+  if(calculatedWeeks.length === 0){
+    html += `<tr><td colspan="${metricCols.length + 2}" class="rowlabel">No checkpoints calculated yet.</td></tr>`;
+  }
+  calculatedWeeks.forEach(w => {
+    const snap = snaps[w];
+    const accent = weekColor(w, maxWeek);
+    ['A','B'].forEach((group, i) => {
+      const s = snap[group];
+      html += `<tr style="border-left:3px solid ${accent};">`;
+      if(i === 0) html += `<td class="rowlabel" rowspan="2" style="vertical-align:middle;font-weight:600;">Week ${w}</td>`;
+      html += `<td class="rowlabel">${group === 'A' ? 'Group A' : 'Group B'}</td>`;
+      metricCols.forEach(([label, key, fmt]) => {
+        const val = s[key];
+        const cls = key === 'avgVariance' && val !== undefined ? (val < 0 ? 'neg' : 'pos') : '';
+        html += `<td class="${cls}">${val !== undefined ? fmt(val) : '—'}</td>`;
+      });
+      html += `</tr>`;
+    });
+  });
+  html += `</table></div></div>`;
+  checkpoints.forEach(w => {
+    const snap = snaps[w];
+    if(snap && snap.A && snap.A.roi){
+      const accent = weekColor(w, maxWeek);
+      html += `<div class="summary-card roi-section" style="border-top-color:${accent};">
+        <h3>ROI</h3>
+        ${renderRoiCard(snap)}
+      </div>`;
+    }
+  });
+  return html;
+}
+
+/* ---------- boot ---------- */
+render();
+loadCampaigns();
+</script>
+</body>
+</html>

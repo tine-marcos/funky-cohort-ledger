@@ -30,7 +30,10 @@
   h1,h2,h3{font-family:var(--font-display);font-weight:700;margin:0 0 4px;}
   #root{max-width:1120px;margin:0 auto;}
 
-  .hero{margin-bottom:20px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+  .hero{margin-bottom:20px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;justify-content:space-between;}
+  .login-wrap{min-height:80vh;display:flex;align-items:center;justify-content:center;}
+  .login-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:32px;width:100%;max-width:380px;}
+  .login-card h1{font-size:24px;color:var(--ink);}
   .hero h1{font-size:26px;color:var(--ink);letter-spacing:0.1px;font-weight:700;}
   .hero .tag{color:var(--ink-soft);font-size:14px;margin:0;font-weight:400;}
 
@@ -164,6 +167,9 @@
 <div id="root"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 /* ---------------------------------------------------------------
    Cohort Ledger v2
@@ -182,27 +188,64 @@
      are flagged "incomplete" rather than silently under-counted
 ------------------------------------------------------------------*/
 
-// Storage backend: uses window.storage when running inside Claude's chat
-// window (campaigns persist across visits there), and falls back to the
-// browser's own localStorage everywhere else — opened as a downloaded file,
-// or hosted on Vercel — so persistence works in both places without
-// changing any of the calling code below.
+// Storage backend: uses window.storage when running inside Claude's chat,
+// Firestore when signed in via Firebase (shared across devices — this is the
+// real persistence layer once deployed), and falls back to the browser's own
+// localStorage if neither is available, so the app never fully breaks.
 const LS_PREFIX = 'cohortLedger:';
+const FIRESTORE_COLLECTION = 'cohortLedger';
 const hasNativeStorage = typeof window.storage !== 'undefined' && window.storage !== null;
+let firebaseReady = false;
+let fbAuth = null, fbDb = null;
+const firestoreBackend = {
+  async get(key){
+    const snap = await fbDb.collection(FIRESTORE_COLLECTION).doc(key).get();
+    if(!snap.exists) throw new Error('key not found: ' + key);
+    return { key, value: snap.data().value };
+  },
+  async set(key, value){
+    await fbDb.collection(FIRESTORE_COLLECTION).doc(key).set({ value });
+    return { key, value };
+  },
+  async list(prefix){
+    let query = fbDb.collection(FIRESTORE_COLLECTION);
+    if(prefix){
+      query = query
+        .where(firebase.firestore.FieldPath.documentId(), '>=', prefix)
+        .where(firebase.firestore.FieldPath.documentId(), '<', prefix + '\uf8ff');
+    }
+    const snap = await query.get();
+    const keys = [];
+    snap.forEach(d => keys.push(d.id));
+    return { keys };
+  }
+};
 const storageBackend = {
   async get(key){
     if(hasNativeStorage) return await window.storage.get(key);
+    if(firebaseReady){
+      try{ return await firestoreBackend.get(key); }
+      catch(e){ if(e.message && e.message.startsWith('key not found')) throw e; console.warn('Firestore get failed, falling back to localStorage:', e); }
+    }
     const v = localStorage.getItem(LS_PREFIX + key);
     if(v === null) throw new Error('key not found: ' + key);
     return { key, value: v };
   },
   async set(key, value){
     if(hasNativeStorage) return await window.storage.set(key, value);
+    if(firebaseReady){
+      try{ return await firestoreBackend.set(key, value); }
+      catch(e){ console.warn('Firestore set failed, falling back to localStorage:', e); }
+    }
     localStorage.setItem(LS_PREFIX + key, value);
     return { key, value };
   },
   async list(prefix){
     if(hasNativeStorage) return await window.storage.list(prefix);
+    if(firebaseReady){
+      try{ return await firestoreBackend.list(prefix); }
+      catch(e){ console.warn('Firestore list failed, falling back to localStorage:', e); }
+    }
     const keys = [];
     for(let i = 0; i < localStorage.length; i++){
       const k = localStorage.key(i);
@@ -702,7 +745,56 @@ function computeGroupMetrics(rosterMap, subIndex, ordersIdx, windowDays, fallbac
 }
 
 /* ---------- storage / persistence ---------- */
+// Real-time listeners: when signed in via Firebase, these keep APP state in
+// sync live across every open tab/device — no refresh needed. Falls back to
+// one-shot reads for window.storage (Claude chat) or localStorage, neither of
+// which support live listening.
+let campaignsUnsubscribe = null;
+const snapshotListeners = {};
+function startCampaignsListener(){
+  if(!firebaseReady) return false;
+  if(campaignsUnsubscribe) return true;
+  campaignsUnsubscribe = fbDb.collection(FIRESTORE_COLLECTION)
+    .where(firebase.firestore.FieldPath.documentId(), '>=', 'campaign:')
+    .where(firebase.firestore.FieldPath.documentId(), '<', 'campaign:\uf8ff')
+    .onSnapshot(snap => {
+      const campaigns = [];
+      snap.forEach(doc => { try{ campaigns.push(JSON.parse(doc.data().value)); }catch(e){} });
+      campaigns.sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
+      APP.campaigns = campaigns;
+      render();
+      campaigns.forEach(c => startSnapshotsListener(c.id));
+    }, err => console.warn('Campaigns listener error:', err));
+  return true;
+}
+function startSnapshotsListener(campaignId){
+  if(!firebaseReady) return false;
+  if(snapshotListeners[campaignId]) return true;
+  APP.snapshots[campaignId] = APP.snapshots[campaignId] || {};
+  snapshotListeners[campaignId] = fbDb.collection(FIRESTORE_COLLECTION)
+    .where(firebase.firestore.FieldPath.documentId(), '>=', `snapshot:${campaignId}:`)
+    .where(firebase.firestore.FieldPath.documentId(), '<', `snapshot:${campaignId}:\uf8ff`)
+    .onSnapshot(snap => {
+      snap.forEach(doc => {
+        const parts = doc.id.split(':'); // snapshot:{campaignId}:{week}:{group}
+        const rawWeek = parts[2];
+        const week = isNaN(Number(rawWeek)) ? rawWeek : Number(rawWeek);
+        const group = parts[3];
+        try{
+          APP.snapshots[campaignId][week] = APP.snapshots[campaignId][week] || {};
+          APP.snapshots[campaignId][week][group] = JSON.parse(doc.data().value);
+        }catch(e){ /* skip unreadable doc */ }
+      });
+      render();
+    }, err => console.warn('Snapshots listener error for', campaignId, err));
+  return true;
+}
+function stopAllListeners(){
+  if(campaignsUnsubscribe){ campaignsUnsubscribe(); campaignsUnsubscribe = null; }
+  Object.keys(snapshotListeners).forEach(id => { snapshotListeners[id](); delete snapshotListeners[id]; });
+}
 async function loadCampaigns(){
+  if(startCampaignsListener()) return;
   try{
     const res = await storageBackend.list('campaign:');
     if(res && res.keys){
@@ -740,6 +832,7 @@ function nextDueCheckpoint(campaignId, camp){
   return null;
 }
 async function loadSnapshotsFor(campaignId){
+  if(startSnapshotsListener(campaignId)) return;
   APP.snapshots[campaignId] = APP.snapshots[campaignId] || {};
   const camp = APP.campaigns.find(c => c.id === campaignId);
   for(const week of getCheckpoints(camp)){
@@ -1279,7 +1372,7 @@ function render(){
 }
 
 function renderHome(){
-  let html = `<div class="hero"><h1>🍃 Cohort Ledger</h1><p class="tag">Winback &amp; retention cohort tracking for Funky Food campaigns</p></div>`;
+  let html = `<div class="hero"><div><h1>🍃 Cohort Ledger</h1><p class="tag">Winback &amp; retention cohort tracking for Funky Food campaigns</p></div><button class="btn-secondary" style="margin-top:0;" onclick="handleSignOut()">Sign out</button></div>`;
   html += `<button class="btn-primary" onclick="toggleForm()">${APP.showForm ? 'Cancel' : '+ New campaign'}</button>`;
   if(APP.showForm) html += renderNewForm();
   html += `<div class="campaign-grid">`;
@@ -1694,9 +1787,64 @@ function renderSummaryTable(camp){
   return html;
 }
 
-/* ---------- boot ---------- */
-render();
-loadCampaigns();
+/* ---------- Firebase Auth: login gate ---------- */
+const firebaseConfig = {
+  apiKey: "AIzaSyBR1iV_Pv2xVFqFhc5DzkRyI2qev3rXimM",
+  authDomain: "funky-delivery-au.firebaseapp.com",
+  projectId: "funky-delivery-au",
+  storageBucket: "funky-delivery-au.firebasestorage.app",
+  messagingSenderId: "904124927999",
+  appId: "1:904124927999:web:e8c3e52187ef250b6ee1ca"
+};
+function renderLoginScreen(errorMsg){
+  document.getElementById('root').innerHTML = `
+    <div class="login-wrap">
+      <div class="login-card">
+        <h1 style="margin-bottom:4px;">🍃 Cohort Ledger</h1>
+        <p class="tag" style="margin-bottom:20px;">Sign in to access this dashboard.</p>
+        <div class="form-row"><label>Email</label><input id="login_email" type="email" onkeydown="if(event.key==='Enter') handleLogin()"></div>
+        <div class="form-row"><label>Password</label><input id="login_password" type="password" onkeydown="if(event.key==='Enter') handleLogin()"></div>
+        ${errorMsg ? `<div class="warn" style="margin-bottom:10px;">${escapeHtml(errorMsg)}</div>` : ''}
+        <button class="btn-primary" style="width:100%;" onclick="handleLogin()">Sign in</button>
+      </div>
+    </div>`;
+}
+function handleLogin(){
+  const email = document.getElementById('login_email').value.trim();
+  const password = document.getElementById('login_password').value;
+  if(!email || !password){ renderLoginScreen('Enter both email and password.'); return; }
+  fbAuth.signInWithEmailAndPassword(email, password).catch(err => {
+    renderLoginScreen(err.message || 'Sign-in failed — check your email and password.');
+  });
+}
+function handleSignOut(){ fbAuth.signOut(); }
+
+try{
+  firebase.initializeApp(firebaseConfig);
+  fbAuth = firebase.auth();
+  fbDb = firebase.firestore();
+  fbAuth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(e => console.warn('Could not set session persistence:', e));
+  renderLoginScreen();
+  fbAuth.onAuthStateChanged(user => {
+    if(user){
+      firebaseReady = true;
+      APP.campaigns = [];
+      APP.snapshots = {};
+      render();
+      loadCampaigns();
+    } else {
+      firebaseReady = false;
+      stopAllListeners();
+      APP.campaigns = [];
+      APP.snapshots = {};
+      renderLoginScreen();
+    }
+  });
+}catch(e){
+  console.error('Firebase init failed, falling back to local-only mode:', e);
+  render();
+  loadCampaigns();
+}
 </script>
 </body>
 </html>

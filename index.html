@@ -985,6 +985,8 @@ async function computeCheckpoint(week){
     metricsA.excludedNotGenuine = excludedA;
     metricsB.matchShortfalls = shortfalls;
     metricsB.candidatePoolSize = rosterB.size;
+    metricsA.frequencyDist = Object.fromEntries(targetDist);
+    metricsB.frequencyDist = Object.fromEntries(buildFrequencyDistribution(rosterBMatched, subIndex, up.fallbackDays));
 
     // ROI: discount cost comes from Group A's own qualifying orders (Discount Amount);
     // incremental revenue compares Group A's actual revenue against Group B's matched
@@ -1542,8 +1544,21 @@ function renderRoiCard(snap){
   html += `</table>`;
   return html;
 }
+function renderFrequencyMix(distA, distB){
+  if(!distA && !distB) return '';
+  const allDays = Array.from(new Set([...Object.keys(distA||{}), ...Object.keys(distB||{})])).map(Number).sort((a,b) => a-b);
+  if(allDays.length === 0) return '';
+  let html = `<div class="hint" style="margin-bottom:6px;"><b>Frequency mix</b> — Group A vs Group B (matched)</div>`;
+  html += `<table class="detail-table" style="margin-bottom:14px;"><tr><th>Frequency</th><th>Group A</th><th>Group B</th></tr>`;
+  allDays.forEach(days => {
+    html += `<tr><td>${freqLabel(days)}</td><td>${fmtInt((distA && distA[days]) || 0)}</td><td>${fmtInt((distB && distB[days]) || 0)}</td></tr>`;
+  });
+  html += `</table>`;
+  return html;
+}
 function renderCheckpointResults(snap, week, camp){
-  let html = `<table class="results-table">
+  let html = renderFrequencyMix(snap.A.frequencyDist, snap.B.frequencyDist);
+  html += `<table class="results-table">
     <tr><th></th><th>Group A</th><th>Group B</th></tr>
     <tr><td># of Customers</td><td>${fmtInt(snap.A.customers)}</td><td>${fmtInt(snap.B.customers)}</td></tr>
     <tr><td>% Still Active</td><td>${statusCell(week,'A','active',snap.A.activePct)}</td><td>${statusCell(week,'B','active',snap.B.activePct)}</td></tr>
